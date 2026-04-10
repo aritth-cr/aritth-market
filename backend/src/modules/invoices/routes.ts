@@ -1,8 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../../shared/prisma/client.js';
-import { requireClient, requireAdmin } from '../../plugins/auth.js';
+import { requireClient, requireAritth } from '../../plugins/auth.js';
 import { z } from 'zod';
-import { Decimal } from '@prisma/client/runtime/library.js';
 
 const invoiceQuerySchema = z.object({
   status: z.enum(['PENDING_REVIEW', 'APPROVED', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED']).optional(),
@@ -211,9 +210,8 @@ export async function invoicesRoutes(app: FastifyInstance) {
    */
   app.post<{ Body: any }>(
     '/api/invoices/admin',
-    { onRequest: [requireAdmin] },
+    { onRequest: [requireAritth] },
     async (request, reply) => {
-      const aritthUser = (request as any).aritthUser;
 
       let body;
       try {
@@ -292,7 +290,7 @@ export async function invoicesRoutes(app: FastifyInstance) {
    */
   app.get<{ Querystring: any }>(
     '/api/invoices/admin/list',
-    { onRequest: [requireAdmin] },
+    { onRequest: [requireAritth] },
     async (request, reply) => {
       const query = adminListSchema.parse(request.query);
 
@@ -363,7 +361,7 @@ export async function invoicesRoutes(app: FastifyInstance) {
    */
   app.patch<{ Params: { id: string }; Body: any }>(
     '/api/invoices/admin/:id/review',
-    { onRequest: [requireAdmin] },
+    { onRequest: [requireAritth] },
     async (request, reply) => {
       const aritthUser = (request as any).aritthUser;
       const { id } = request.params;
@@ -468,7 +466,7 @@ export async function invoicesRoutes(app: FastifyInstance) {
    */
   app.patch<{ Params: { id: string } }>(
     '/api/invoices/admin/:id/send',
-    { onRequest: [requireAdmin] },
+    { onRequest: [requireAritth] },
     async (request, reply) => {
       const { id } = request.params;
 
@@ -520,7 +518,7 @@ export async function invoicesRoutes(app: FastifyInstance) {
    */
   app.patch<{ Params: { id: string }; Body: any }>(
     '/api/invoices/admin/:id/payment',
-    { onRequest: [requireAdmin] },
+    { onRequest: [requireAritth] },
     async (request, reply) => {
       const { id } = request.params;
 
@@ -587,7 +585,7 @@ export async function invoicesRoutes(app: FastifyInstance) {
    */
   app.post<{ Params: { id: string }; Body: any }>(
     '/api/invoices/admin/:id/notes',
-    { onRequest: [requireAdmin] },
+    { onRequest: [requireAritth] },
     async (request, reply) => {
       const aritthUser = (request as any).aritthUser;
       const { id } = request.params;
@@ -595,24 +593,17 @@ export async function invoicesRoutes(app: FastifyInstance) {
       let body;
       try {
         body = noteSchema.parse(request.body);
-      } catch (error) {
+      } catch (_error) {
         return reply.code(400).send({
           statusCode: 400,
           error: 'VALIDATION_ERROR',
-          message: 'Invalid request body',
+          message: 'Datos inválidos',
         });
       }
 
-      const invoice = await prisma.invoice.findUnique({
-        where: { id },
-      });
-
+      const invoice = await prisma.invoice.findUnique({ where: { id } });
       if (!invoice) {
-        return reply.code(404).send({
-          statusCode: 404,
-          error: 'NOT_FOUND',
-          message: 'Invoice not found',
-        });
+        return reply.code(404).send({ statusCode: 404, error: 'NOT_FOUND', message: 'Factura no encontrada' });
       }
 
       const note = await prisma.internalNote.create({
@@ -623,7 +614,7 @@ export async function invoicesRoutes(app: FastifyInstance) {
         },
       });
 
-      return reply.code(201).send(note);
-    }
+      return reply.send(note);
+    },
   );
 }

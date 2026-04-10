@@ -4,7 +4,6 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import staticFiles from '@fastify/static';
 import { join } from 'path';
-import { fileURLToPath } from 'url';
 
 import { env } from './config/env.js';
 import { registerAuthPlugin } from './plugins/auth.js';
@@ -17,8 +16,6 @@ import { invoicesRoutes } from './modules/invoices/routes.js';
 import { getOffersForHomepage } from './modules/scraping/offers.js';
 import { clerkWebhookRoutes } from './modules/webhooks/clerk.js';
 import { AppError } from './shared/errors/AppError.js';
-
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export async function buildApp() {
   const app = Fastify({
@@ -153,7 +150,7 @@ export async function buildApp() {
   await app.register(backOfficeRoutes, { prefix: '/api/admin' });
 
   // ---- MANEJO DE ERRORES GLOBAL ----
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler((error: any, _request, reply) => {
     if (error instanceof AppError) {
       return reply.status(error.statusCode).send({
         statusCode: error.statusCode,
@@ -179,4 +176,12 @@ export async function buildApp() {
 
     // Error interno
     app.log.error(error);
-    return reply.status(500).send(
+    return reply.status(500).send({
+      statusCode: 500,
+      error: 'INTERNAL_SERVER_ERROR',
+      message: 'Error interno del servidor',
+    });
+  });
+
+  return app;
+}

@@ -378,26 +378,4 @@ export function useProductSearch(initialQuery = ''): UseProductSearchReturn {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Search failed';
-      console.error('Error searching products:', err);
-      setError(message);
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedQuery, getToken, isLoaded]);
-
-  // Trigger search when debounced query changes
-  useEffect(() => {
-    search();
-  }, [debouncedQuery, search]);
-
-  return {
-    query,
-    setQuery,
-    debouncedQuery,
-    results,
-    loading,
-    error,
-    search,
-  };
-}
+      console.error('Error searching produ

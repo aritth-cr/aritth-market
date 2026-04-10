@@ -11,6 +11,11 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+function formatCRC(amount: number): string {
+  return '₡' + amount.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+
 interface QuoteEmailData {
   to: string[];
   quoteNumber: string;
@@ -137,8 +142,4 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData): Promise<
     subject: `Orden Confirmada ${data.orderNumber} - Aritth Market`,
     html,
   });
-}
-
-function formatCRC(amount: number): string {
-  return `₡${amount.toLocaleString('es-CR', { minimumFractionDigits: 2 })}`;
 }

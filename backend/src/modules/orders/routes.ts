@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../../shared/prisma/client.js';
-import { requireClient, requireAdmin } from '../../plugins/auth.js';
+import { requireClient, requireAritth } from '../../plugins/auth.js';
 import { z } from 'zod';
 
 // Esquemas de validación
@@ -285,7 +285,7 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
 
   // GET /api/orders/admin/list — Listar todas las órdenes con filtros
   app.get('/admin/list', {
-    preHandler: [requireAdmin],
+    preHandler: [requireAritth],
   }, async (request) => {
     const { status, companyId, page = '1', limit = '20' } = request.query as Record<string, string>;
 
@@ -334,7 +334,7 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
 
   // PATCH /api/orders/admin/:id/status — Cambiar status de orden
   app.patch('/admin/:id/status', {
-    preHandler: [requireAdmin],
+    preHandler: [requireAritth],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = updateStatusSchema.parse(request.body);
@@ -424,7 +424,7 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
 
   // PATCH /api/orders/admin/:id/delivery — Actualizar fecha de entrega y notas
   app.patch('/admin/:id/delivery', {
-    preHandler: [requireAdmin],
+    preHandler: [requireAritth],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = updateDeliverySchema.parse(request.body);
@@ -485,17 +485,16 @@ export async function orderRoutes(app: FastifyInstance): Promise<void> {
           deliveryNotes: body.deliveryNotes,
         },
       },
-    }).catch(() => {
-      // Si falla el audit log, no interrumpir la operación
-    });
+    }).catch(() => {});
 
     return reply.status(200).send({
       id: updatedOrder.id,
       number: updatedOrder.number,
+      status: updatedOrder.status,
       estimatedDelivery: updatedOrder.estimatedDelivery,
       deliveryNotes: updatedOrder.deliveryNotes,
       updatedAt: updatedOrder.updatedAt,
-      message: 'Información de entrega actualizada correctamente',
+      message: 'Entrega actualizada correctamente',
     });
   });
 }

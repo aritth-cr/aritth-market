@@ -14,13 +14,6 @@ function generateDocNumber(prefix: string, seq: number): string {
   return `${prefix}-${year}-${padded}`;
 }
 
-async function nextSequence(model: string): Promise<number> {
-  // Usa una sequence para números únicos
-  const result = await prisma.$queryRaw<[{ nextval: bigint }]>`
-    SELECT nextval('${model}_seq')
-  `;
-  return Number(result[0]?.nextval ?? 1);
-}
 
 const createQuoteSchema = z.object({
   cartId: z.string().cuid(),
@@ -68,11 +61,11 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
     if (cart.items.length === 0) return reply.status(400).send({ error: 'El carrito está vacío' });
 
     // Verificar stock
-    const outOfStock = cart.items.filter(i => !i.product.inStock);
+    const outOfStock = cart.items.filter((i: any) => !i.product.inStock);
     if (outOfStock.length > 0) {
       return reply.status(400).send({
         error: 'Algunos productos están sin stock',
-        products: outOfStock.map(i => i.product.name),
+        products: outOfStock.map((i: any) => i.product.name),
       });
     }
 
@@ -80,7 +73,7 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
     const rates = await getTodayRates();
 
     // Calcular precios
-    const itemsWithPricing = cart.items.map(item => {
+    const itemsWithPricing = cart.items.map((item: any) => {
       const pricing = calculateProductPrice(Number(item.product.storePrice), isExempt);
       return {
         productId: item.product.id,
@@ -137,7 +130,7 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
         ...(body.notes !== undefined ? { notes: body.notes } : {}),
         expiresAt,
         items: {
-          create: itemsWithPricing.map(i => ({
+          create: itemsWithPricing.map((i: any) => ({
             productId: i.productId,
             quantity: i.quantity,
             unit: i.product.unit,
@@ -172,7 +165,7 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
           ? { email: (company.quoteEmail ?? company.invoiceEmail)! }
           : {}),
       },
-      items: itemsWithPricing.map(i => ({
+      items: itemsWithPricing.map((i: any) => ({
         description: i.product.name,
         ...(i.product.sku != null ? { sku: i.product.sku } : {}),
         quantity: i.quantity,
@@ -390,4 +383,20 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
 
     const recipients = [company.invoiceEmail, company.quoteEmail].filter(Boolean) as string[];
     if (recipients.length > 0) {
-      await sendOrder
+      await sendOrderConfirmationEmail({
+        to: recipients,
+        orderNumber: order.number,
+        quoteNumber: quote.number,
+        companyName: company.name,
+        poNumber: order.poNumber,
+        total: Number(order.total),
+      });
+    }
+
+    return reply.status(201).send({
+      id: order.id,
+      number: order.number,
+      invoiceNumber,
+    });
+  });
+}

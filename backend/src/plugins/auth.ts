@@ -8,7 +8,8 @@ import {
   CompanyPendingError,
   CompanySuspendedError,
 } from '../shared/errors/AppError.js';
-import type { AritthRole, CompanyRole } from '@prisma/client';
+type AritthRole = 'SUPER_ADMIN' | 'ADMIN' | 'INVOICE_REVIEWER' | 'FINANCE' | 'OPERATIONS' | 'SUPPORT';
+type CompanyRole = 'ADMIN' | 'PURCHASER' | 'VIEWER';
 
 type FastifyInstance = ReturnType<typeof Fastify>;
 
@@ -53,7 +54,7 @@ export async function registerAuthPlugin(app: FastifyInstance): Promise<void> {
  */
 export async function requireClient(
   request: any,
-  reply: any,
+  _reply: any,
 ): Promise<void> {
   const auth = getAuth(request);
 
@@ -141,11 +142,10 @@ export function requireAritthRole(roles: AritthRole[]) {
  * Middleware factory: requiere rol específico de cliente
  */
 export function requireClientRole(roles: CompanyRole[]) {
-  return async function (request: any, reply: any): Promise<void> {
-    await requireClient(request, reply);
-
+  return async function (request: any, _reply: any): Promise<void> {
+    await requireClient(request, _reply);
     if (!roles.includes(request.clientUser.role)) {
-      throw new ForbiddenError('No tiene permisos para esta acción');
+      throw new ForbiddenError(`Requiere rol: ${roles.join(' o ')}`);
     }
   };
 }

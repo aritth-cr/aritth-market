@@ -271,12 +271,4 @@ export interface DashboardStats {
   pendingQuotes: number;
   totalOrders: number;
   totalRevenue: number;
-  pendingInvoices: number;
-}
-
-// ============================================================================
-// UTILITY TYPES
-// ============================================================================
-
-export type Nullable<T> = T | null;
-export type Optional<T> = T | undefined;
+  pendingInv

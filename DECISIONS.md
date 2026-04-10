@@ -107,6 +107,4 @@
 
 **Razón:** Las sequences de PostgreSQL son atómicas, seguras en concurrencia, sin colisiones aunque haya múltiples instancias del backend.
 
-**Alternativas descartadas:** Auto-increment de Prisma (no da formato personalizable), UUID como número (poco legible para clientes).
-
-**Validado por:** Claude
+**Alternativas descartadas:** Auto-increment de Pris

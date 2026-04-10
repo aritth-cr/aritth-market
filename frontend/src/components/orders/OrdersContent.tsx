@@ -117,13 +117,4 @@ export function OrdersContent({ token }: { token: string }) {
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+                 

@@ -207,12 +207,4 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-[#1e1e1e] py-3 px-6">
-          <p className="text-[11px] text-gray-700 text-center">
-            Aritth Market — Panel interno · {new Date().getFullYear()}
-          </p>
-        </footer>
-      </div>
-    </div>
-  );
-}
+        <footer className="border-t border-[#1e1e1e] py-3 

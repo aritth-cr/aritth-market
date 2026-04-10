@@ -118,7 +118,7 @@ function getFallbackCategories(): Array<{ name: string; url: string }> {
 function parseProductPage(
   html: string,
   categoryName: string,
-  categoryUrl: string,
+  _categoryUrl: string,
 ): ScrapedProduct[] {
   const $ = cheerio.load(html);
   const products: ScrapedProduct[] = [];
@@ -215,4 +215,13 @@ export async function scrapeNovexOffers(): Promise<ScrapedProduct[]> {
   const allOffers: ScrapedProduct[] = [];
 
   for (const url of offerUrls) {
-    const html = await fetchPage
+    const html = await fetchPage(url);
+    if (!html) continue;
+
+    const products = parseProductPage(html, 'Ofertas', url);
+    allOffers.push(...products);
+    await sleep(DELAY_MS);
+  }
+
+  return allOffers;
+}

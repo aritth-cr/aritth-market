@@ -3,7 +3,6 @@ import { prisma } from '../../shared/prisma/client.js';
 import { requireClient } from '../../plugins/auth.js';
 import { calculateProductPrice } from '../pricing/calculator.js';
 import { searchProducts, getSearchSuggestions } from '../search/service.js';
-import { env } from '../../config/env.js';
 import { z } from 'zod';
 
 const productQuerySchema = z.object({
@@ -33,10 +32,10 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
       const results = await searchProducts({
         query: query.search,
         limit: query.limit,
-        category: query.category,
-        inStockOnly: query.inStock,
-        minPrice: query.minPrice,
-        maxPrice: query.maxPrice,
+        ...(query.category !== undefined ? { category: query.category } : {}),
+        ...(query.inStock !== undefined ? { inStockOnly: query.inStock } : {}),
+        ...(query.minPrice !== undefined ? { minPrice: query.minPrice } : {}),
+        ...(query.maxPrice !== undefined ? { maxPrice: query.maxPrice } : {}),
       });
 
       return {
@@ -67,8 +66,8 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
         select: { id: true },
       });
 
-      storeIdsAvailableToday = stores.map(s => s.id);
-      if (storeIdsAvailableToday.length === 0) {
+      storeIdsAvailableToday = stores.map((s: { id: string }) => s.id);
+      if (storeIdsAvailableToday!.length === 0) {
         return { data: [], meta: { total: 0, page: query.page, limit: query.limit, hasMore: false } };
       }
     }
@@ -128,7 +127,7 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
     const currentDay = dayNames[now.getDay()]!;
     const currentHour = now.getHours();
 
-    const data = products.map(p => {
+    const data = products.map((p: any) => {
       const price = Number(p.storePrice);
       const pricing = calculateProductPrice(price, isExempt);
 
@@ -197,7 +196,7 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
       orderBy: { _count: { id: 'desc' } },
     });
 
-    return categories.map(c => ({
+    return categories.map((c: any) => ({
       name: c.category,
       count: c._count.id,
     }));
@@ -288,12 +287,14 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
         userId: user.id,
         productId: id,
         type,
-        targetPrice,
+        ...(targetPrice !== undefined ? { targetPrice } : {}),
+      },
+      update: {
+        ...(targetPrice !== undefined ? { targetPrice } : {}),
         isActive: true,
       },
-      update: { isActive: true, targetPrice },
     });
 
-    return { success: true, message: 'Alerta configurada correctamente' };
+    return { success: true };
   });
 }

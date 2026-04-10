@@ -175,10 +175,4 @@ aritth-app/
 
 - `/backend/.env.example` ✓
 - `/backend/.env.production.example` ✓
-- `/frontend/.env.local.example` ✓
-- `/frontend/.env.production.example` ✓
-- `/frontend/next.config.ts` ✓
-
----
-
-Todos los archivos están listos para usar. Sin secretos reales. Sin TODOs.
+- `/frontend/.env

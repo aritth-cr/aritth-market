@@ -192,4 +192,15 @@ async function notifyStockAlerts(productId: string): Promise<void> {
 }
 
 /**
- * Crea un nuevo job de scraping y lo encola
+ * Crea un nuevo job de scraping y lo encola
+ */
+export async function createScrapingJob(storeId: string): Promise<string> {
+  const job = await prisma.scrapingJob.create({
+    data: {
+      storeId,
+      status: 'QUEUED',
+    },
+  });
+
+  return job.id;
+}

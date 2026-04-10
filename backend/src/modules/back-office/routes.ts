@@ -76,7 +76,7 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
           : null,
       },
       recentOrders,
-      scrapingStatus: scrapingStatus.map(j => ({
+      scrapingStatus: scrapingStatus.map((j: any) => ({
         store: j.store.name,
         status: j.status,
         productsFound: j.productsFound,
@@ -126,7 +126,7 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
   // PUT /api/admin/companies/:id — Aprobar / Rechazar empresa
   app.put('/companies/:id', {
     preHandler: [requireAritthRole(['SUPER_ADMIN', 'ADMIN'])],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { id } = request.params as { id: string };
     const body = z.object({
       status: z.enum(['ACTIVE', 'REJECTED', 'SUSPENDED']),
@@ -141,13 +141,13 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
       where: { id },
       data: {
         status: body.status,
-        ...(body.creditLimit !== undefined && { creditLimit: body.creditLimit }),
-        ...(body.creditTermsDays !== undefined && { creditTermsDays: body.creditTermsDays }),
-        ...(body.rejectionReason && { rejectionReason: body.rejectionReason }),
-        ...(body.status === 'ACTIVE' && {
+        ...(body.creditLimit !== undefined ? { creditLimit: body.creditLimit } : {}),
+        ...(body.creditTermsDays !== undefined ? { creditTermsDays: body.creditTermsDays } : {}),
+        ...(body.rejectionReason ? { rejectionReason: body.rejectionReason } : {}),
+        ...(body.status === 'ACTIVE' ? {
           approvedAt: new Date(),
           approvedBy: user.id,
-        }),
+        } : {}),
       },
     });
 
@@ -203,7 +203,7 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
   // PUT /api/admin/invoices/:id/approve — Aprobar factura
   app.put('/invoices/:id/approve', {
     preHandler: [requireAritthRole(['SUPER_ADMIN', 'ADMIN', 'INVOICE_REVIEWER', 'FINANCE'])],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { id } = request.params as { id: string };
     const { notes } = request.body as { notes?: string };
     const user = (request as any).aritthUser;
@@ -321,7 +321,7 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
       },
     });
 
-    return stores.map(s => ({
+    return stores.map((s: any) => ({
       id: s.id,
       name: s.name,
       isActive: s.isActive,
@@ -358,4 +358,12 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
   // ---- PRECIOS ----
 
   // GET /api/admin/pricing/margin — Ver margen actual
-  app.get('/pricing/margin
+  app.get('/pricing/margin', {
+    preHandler: [requireAritth],
+  }, async () => {
+    return {
+      defaultMargin: Number(process.env['DEFAULT_MARGIN'] ?? 0.10),
+      ivaRate: Number(process.env['IVA_RATE'] ?? 0.13),
+    };
+  });
+}

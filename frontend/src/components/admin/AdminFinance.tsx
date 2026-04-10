@@ -171,15 +171,4 @@ export function AdminFinance({ token }: { token: string }) {
                             {BUCKET_LABELS[item.bucket] ?? item.bucket}
                           </span>
                         </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-    </div>
-  );
-}
+                      </

@@ -354,17 +354,4 @@ function ProductCard({
             added
               ? 'bg-green-600/20 text-green-400 border border-green-600/30'
               : product.inStock
-                ? 'bg-[#5F6C4E] hover:bg-[#4a5540] text-white'
-                : 'bg-[#333] text-gray-600 cursor-not-allowed'
-          }`}
-        >
-          {added ? (
-            <><Check className="w-4 h-4" /> Agregado</>
-          ) : (
-            <><ShoppingCart className="w-4 h-4" /> Agregar</>
-          )}
-        </button>
-      </div>
-    </motion.div>
-  );
-}
+                ? 

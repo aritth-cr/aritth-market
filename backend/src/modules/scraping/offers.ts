@@ -1,6 +1,4 @@
-import * as cheerio from 'cheerio';
 import { prisma } from '../../shared/prisma/client.js';
-import { env } from '../../config/env.js';
 
 /**
  * Servicio de Ofertas / Promociones del Homepage.
@@ -18,55 +16,6 @@ export interface HomepageOffer {
   category: string;
   inStock: boolean;
   // storeSource: OMITIDO — privado
-}
-
-async function fetchHtml(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': env.USER_AGENT },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return null;
-    return res.text();
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Scraping de ofertas de EPA
- */
-async function getEpaOffers(): Promise<Array<{ name: string; price: number; imageUrl?: string; category: string }>> {
-  const offerUrls = [
-    'https://www.epa.cr/promotions',
-    'https://www.epa.cr/ofertas',
-    'https://www.epa.cr/sale',
-  ];
-
-  for (const url of offerUrls) {
-    const html = await fetchHtml(url);
-    if (!html) continue;
-
-    const $ = cheerio.load(html);
-    const offers: Array<{ name: string; price: number; imageUrl?: string; category: string }> = [];
-
-    $('.product-item, .item.product').each((_, el) => {
-      const $el = $(el);
-      const name = $el.find('.product-item-name, .product-item-link').text().trim();
-      const priceText = $el.find('.special-price .price, .price').first().text().trim();
-      const price = parseFloat(priceText.replace(/[₡,.\s]/g, '').slice(0, -2)) || 0;
-      const img = $el.find('img').attr('src') || $el.find('img').attr('data-src');
-      const cat = $el.closest('[class*="category"]').attr('data-category') || 'Herramientas';
-
-      if (name && price > 0) {
-        offers.push({ name, price, imageUrl: img, category: cat });
-      }
-    });
-
-    if (offers.length > 0) return offers.slice(0, 20);
-  }
-
-  return [];
 }
 
 /**
@@ -98,7 +47,7 @@ export async function getHomepageOffers(limit = 12): Promise<HomepageOffer[]> {
   `;
 
   if (recentPriceDrops.length >= limit / 2) {
-    return recentPriceDrops.map(p => ({
+    return recentPriceDrops.map((p: any) => ({
       productId: p.id,
       name: p.name,
       imageUrl: p.imageUrl,
@@ -128,7 +77,7 @@ export async function getHomepageOffers(limit = 12): Promise<HomepageOffer[]> {
     LIMIT ${limit}
   `;
 
-  return featuredProducts.map(p => ({
+  return featuredProducts.map((p: any) => ({
     productId: p.id,
     name: p.name,
     imageUrl: p.imageUrl,
@@ -157,8 +106,7 @@ export async function getOffersForHomepage() {
 
   return {
     offers,
-    categories: categories.map(c => ({ name: c.category, count: c._count.id })),
+    categories: categories.map((c: any) => ({ name: c.category, count: c._count.id })),
     totalProducts,
-    lastUpdated: new Date(),
   };
 }

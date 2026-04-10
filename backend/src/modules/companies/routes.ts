@@ -46,20 +46,20 @@ export async function companyRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Crear empresa + primer usuario en transacción
-    const company = await prisma.$transaction(async (tx) => {
+    const company = await prisma.$transaction(async (tx: any) => {
       const newCompany = await tx.company.create({
         data: {
           name: body.name,
           legalName: body.legalName,
           cedula: body.cedula,
           type: body.type,
-          exonerationCode: body.type === 'FREE_ZONE' ? body.exonerationCode : null,
-          phone: body.phone,
-          address: body.address,
-          canton: body.canton,
-          province: body.province,
-          invoiceEmail: body.invoiceEmail,
-          quoteEmail: body.quoteEmail,
+          exonerationCode: body.type === 'FREE_ZONE' ? (body.exonerationCode ?? null) : null,
+          ...(body.phone !== undefined ? { phone: body.phone } : {}),
+          ...(body.address !== undefined ? { address: body.address } : {}),
+          ...(body.canton !== undefined ? { canton: body.canton } : {}),
+          ...(body.province !== undefined ? { province: body.province } : {}),
+          ...(body.invoiceEmail !== undefined ? { invoiceEmail: body.invoiceEmail } : {}),
+          ...(body.quoteEmail !== undefined ? { quoteEmail: body.quoteEmail } : {}),
           preferredCurrency: body.preferredCurrency,
           status: 'PENDING',
         },
@@ -188,14 +188,7 @@ export async function companyRoutes(app: FastifyInstance): Promise<void> {
 
     return prisma.user.findMany({
       where: { companyId: user.companyId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
     });
   });
 }

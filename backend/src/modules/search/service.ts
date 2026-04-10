@@ -244,13 +244,22 @@ export async function getSearchSuggestions(partial: string): Promise<string[]> {
       OR: [
         { name: { contains: partial, mode: 'insensitive' } },
         { category: { contains: partial, mode: 'insensitive' } },
-        { brand: { contains: partial, mode: 'insensitive' } },
       ],
     },
     select: { name: true, category: true },
-    distinct: ['name'],
-    take: 8,
+    take: 10,
+    orderBy: { name: 'asc' },
   });
 
-  return results.map(r => r.name);
+  const seen = new Set<string>();
+  const suggestions: string[] = [];
+  for (const r of results) {
+    for (const val of [r.name, r.category]) {
+      if (!seen.has(val) && val.toLowerCase().includes(partial.toLowerCase())) {
+        seen.add(val);
+        suggestions.push(val);
+      }
+    }
+  }
+  return suggestions.slice(0, 8);
 }

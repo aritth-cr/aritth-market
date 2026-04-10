@@ -227,10 +227,9 @@ export async function clerkWebhookRoutes(app: FastifyInstance): Promise<void> {
         // Always return 200 to acknowledge receipt (prevents Clerk from retrying)
         return reply.status(200).send({ received: true });
       } catch (error) {
-        console.error('[Clerk Webhook] Error processing event:', error);
-        // Still return 200 to prevent infinite retries
-        return reply.status(200).send({ received: true, error: 'Processing failed but acknowledged' });
+        console.error("[Clerk Webhook] Error processing event:", error);
+        return reply.status(500).send({ error: "Internal server error" });
       }
-    }
+    },
   );
 }

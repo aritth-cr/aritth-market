@@ -229,15 +229,4 @@ export const invoicesApi = {
     }),
 
   adminAddNote: (id: string, content: string, token: string) =>
-    apiFetch(`/api/invoices/admin/${id}/notes`, {
-      method: 'POST',
-      body: JSON.stringify({ content }),
-      token,
-    }),
-};
-
-// ---- Ofertas (público) ----
-export const offersApi = {
-  getHomepageOffers: () =>
-    apiFetch('/api/offers'),
-};
+    apiFetch(`/api/invoic

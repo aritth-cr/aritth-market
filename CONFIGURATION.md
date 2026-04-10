@@ -259,10 +259,4 @@ remotePatterns: [
 ## Soporte
 
 Para ayuda adicional:
-1. Revisar logs del servidor: `npm run dev`
-2. Consultar documentación oficial:
-   - Clerk: https://clerk.com/docs
-   - Next.js: https://nextjs.org/docs
-   - Fastify: https://www.fastify.io/docs
-   - PostgreSQL: https://www.postgresql.org/docs
-   - Redis: https://redis.io/documentation
+1. Revisar logs del servido

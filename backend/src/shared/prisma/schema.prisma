@@ -595,29 +595,3 @@ model InternalNote {
   id        String   @id @default(cuid())
   invoiceId String
   authorId  String   // AritthUser ID
-  content   String
-  createdAt DateTime @default(now())
-
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
-}
-
-// =============================================
-// AUDIT LOG
-// =============================================
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  entity    String
-  entityId  String
-  data      Json?
-  ip        String?
-  createdAt DateTime @default(now())
-
-  user      User?    @relation(fields: [userId], references: [id])
-
-  @@index([entity, entityId])
-  @@index([userId])
-  @@index([createdAt])
-}

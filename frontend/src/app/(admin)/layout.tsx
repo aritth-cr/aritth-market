@@ -11,5 +11,4 @@ export default async function AdminGroupLayout({
 
   if (!userId) redirect('/sign-in');
 
-  return <AdminLayout>{children}</AdminLayout>;
-}
+  return <AdminLayout>{children}</Adm

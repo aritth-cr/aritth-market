@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { chromium } from 'playwright';
 import { env } from '../../../config/env.js';
 
@@ -111,7 +112,7 @@ async function scrapeCategoryPage(
     return [];
   }
 
-  return page.evaluate((category: string, baseUrl: string) => {
+  return page.evaluate((category: string, _baseUrl: string) => {
     const products: ScrapedProduct[] = [];
     const items = document.querySelectorAll('.product-item, .item.product');
 
@@ -157,4 +158,10 @@ async function scrapeCategoryPage(
           unit: 'unidad',
         });
       } catch {
-        // Continuar c
+        // Continuar con siguiente producto
+      }
+    });
+
+    return products;
+  }, categoryName, BASE_URL);
+}

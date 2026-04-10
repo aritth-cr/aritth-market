@@ -1,12 +1,10 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { saveFile } from '../../shared/utils/storage.js';
 
 // =============================================
 // COLORES ARITTH MARKET
 // =============================================
 const COLOR_BG = rgb(0.102, 0.102, 0.102);           // #1a1a1a
 const COLOR_PRIMARY = rgb(0.373, 0.424, 0.306);        // #5F6C4E (verde Aritth)
-const COLOR_ACCENT = rgb(0.976, 0.455, 0.086);         // #F97316 (naranja accent)
 const COLOR_WHITE = rgb(1, 1, 1);
 const COLOR_LIGHT_GRAY = rgb(0.95, 0.95, 0.95);
 const COLOR_MED_GRAY = rgb(0.7, 0.7, 0.7);
@@ -141,7 +139,6 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
   y -= 30;
 
   // ---- TABLA DE PRODUCTOS ----
-  const tableTop = y;
   const colWidths = [25, 205, 55, 50, 85, 85]; // #, Descripción, Cant, Unidad, Precio Unit, Total
   const colX = [40];
   for (let i = 0; i < colWidths.length - 1; i++) {
@@ -317,9 +314,7 @@ function drawSummaryRow(
   label: string,
   value: string,
 ): void {
-  page.drawText(label, { x, y, size: 9, font: regular, color: rgb(0.5, 0.5, 0.5) });
-  page.drawText(value, {
-    x: 570 - bold.widthOfTextAtSize(value, 9),
-    y, size: 9, font: bold, color: rgb(0.1, 0.1, 0.1),
-  });
+  page.drawText(label, { x, y, size: 9, font: regular, color: COLOR_DARK_TEXT });
+  const valueWidth = bold.widthOfTextAtSize(value, 9);
+  page.drawText(value, { x: 565 - valueWidth, y, size: 9, font: bold, color: COLOR_DARK_TEXT });
 }

@@ -68,3 +68,4 @@ export async function registerOverdueCron() {
       jobId: 'overdue-cron-singleton',
     },
   );
+}
