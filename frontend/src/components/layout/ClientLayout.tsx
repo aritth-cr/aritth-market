@@ -158,3 +158,8 @@ export function ClientLayout({ children, cartCount = 0 }: ClientLayoutProps) {
       {/* Footer */}
       <footer className="bg-[#1a1a1a] border-t border-[#333] py-4 text-center">
  
+        <p className="text-xs text-gray-500">© 2025 Aritth Market. Todos los derechos reservados.</p>
+      </footer>
+    </div>
+  );
+}

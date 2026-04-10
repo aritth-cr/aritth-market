@@ -219,4 +219,14 @@ export function AdminCompanies({ token }: { token: string }) {
               <button
                 onClick={save}
                 disabled={saving}
-                className="flex-1 py-2 bg-[#5F6C4E] text-white rounded-lg text-sm font-semibold hover:bg
+                className="flex-1 py-2 bg-[#5F6C4E] text-white rounded-lg text-sm font-semibold hover:bg-[#4a5540] disabled:bg-[#333] disabled:text-gray-600 transition-colors"
+              >
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

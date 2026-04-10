@@ -271,4 +271,6 @@ export interface DashboardStats {
   pendingQuotes: number;
   totalOrders: number;
   totalRevenue: number;
-  pendingInv
+  pendingInvoices: number;
+  overdueInvoices: number;
+}

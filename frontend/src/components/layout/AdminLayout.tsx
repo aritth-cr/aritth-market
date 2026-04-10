@@ -207,4 +207,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-[#1e1e1e] py-3 
+        <footer className="border-t border-[#1e1e1e] py-3  px-6 text-center text-xs text-gray-600">
+          © 2025 Aritth Market. Todos los derechos reservados.
+        </footer>
+      </div>
+    </div>
+  );
+}

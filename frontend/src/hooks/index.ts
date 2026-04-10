@@ -378,4 +378,12 @@ export function useProductSearch(initialQuery = ''): UseProductSearchReturn {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Search failed';
-      console.error('Error searching produ
+      console.error('Error searching products:', message);
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { results, loading, error, search };
+}

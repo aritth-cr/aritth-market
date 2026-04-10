@@ -229,4 +229,5 @@ export const invoicesApi = {
     }),
 
   adminAddNote: (id: string, content: string, token: string) =>
-    apiFetch(`/api/invoic
+    apiFetch(`/api/invoices/${id}/notes`, { method: 'POST', body: JSON.stringify({ content }), token }),
+};

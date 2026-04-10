@@ -210,4 +210,12 @@ export function CartContent({ token }: { token: string }) {
               )}
             </button>
 
-            {!deliveryAd
+            {!deliveryAddress.trim() && (
+              <p className="text-xs text-red-400 mt-2">Ingresa una dirección de entrega para continuar.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -354,4 +354,19 @@ function ProductCard({
             added
               ? 'bg-green-600/20 text-green-400 border border-green-600/30'
               : product.inStock
-                ? 
+                ? 'bg-[#5F6C4E] hover:bg-[#4a5540] text-white'
+                : 'bg-[#333] text-gray-600 cursor-not-allowed'
+          }`}
+        >
+          {added ? (
+            <><Check className="w-3.5 h-3.5" /> Agregado</>
+          ) : !product.inStock ? (
+            <span>Sin stock</span>
+          ) : (
+            <><ShoppingCart className="w-3.5 h-3.5" /> Agregar</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}

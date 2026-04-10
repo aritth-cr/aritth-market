@@ -229,4 +229,9 @@ function KpiCard({
         )}
       </div>
       <p className="text-2xl font-bold text-white">{value.toLocaleString()}</p>
-      <p className="text-xs text-gray-500
+      <p className="text-xs text-gray-500">{label}</p>
+    </div>
+  );
+  if (href) return <a href={href}>{content}</a>;
+  return content;
+}
