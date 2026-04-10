@@ -1,0 +1,13 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "chromium", "nss", "nspr", "at-spi2-atk", "cups", "libdrm", "dbus", "libxkbcommon", "pango", "cairo", "alsa-lib"]
+
+[phases.install]
+cmds = [
+  "npm install",
+  "npx prisma generate"
+]
+
+[phases.build]
+cmds = [
+  "npm run build"
+]

@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* =============================================
+   ARITTH MARKET — Sistema de Diseño
+   Colores: Verde #5F6C4E, Fondo #1a1a1a, Acento Naranja #F97316
+   ============================================= */
+
+@theme {
+  /* Colores base Aritth */
+  --color-aritth-green: #5F6C4E;
+  --color-aritth-green-dark: #4a5540;
+  --color-aritth-green-light: #7a8f66;
+  --color-aritth-bg: #1a1a1a;
+  --color-aritth-surface: #242424;
+  --color-aritth-border: #333333;
+  --color-aritth-orange: #F97316;
+  --color-aritth-orange-dark: #ea6c0e;
+
+  /* Tipografía */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-aritth-bg);
+  color: #e5e5e5;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Scrollbar personalizado ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-aritth-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-aritth-green); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-aritth-green-light); }
+
+/* ---- Utilidades ---- */
+.text-aritth-green { color: var(--color-aritth-green); }
+.bg-aritth-green { background-color: var(--color-aritth-green); }
+.border-aritth-green { border-color: var(--color-aritth-green); }
+
+/* ---- Animaciones ---- */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}

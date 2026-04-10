@@ -1,0 +1,623 @@
+// Aritth Market (AMT) - Prisma Schema
+// PostgreSQL 16 + pgvector for semantic search
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// =============================================
+// ENUMS
+// =============================================
+
+enum CompanyType {
+  FREE_ZONE  // Zona Franca - exento de IVA cliente
+  REGULAR    // Empresa regular - paga IVA
+}
+
+enum CompanyStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum CompanyRole {
+  ADMIN
+  PURCHASER
+  VIEWER
+}
+
+enum AritthRole {
+  SUPER_ADMIN
+  ADMIN
+  INVOICE_REVIEWER
+  FINANCE
+  OPERATIONS
+  SUPPORT
+}
+
+enum Currency {
+  CRC
+  USD
+  EUR
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  CONFIRMED
+  EXPIRED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  PENDING_REVIEW   // Borrador - esperando revisión interna Aritth
+  APPROVED         // Aprobada por Aritth - lista para enviar
+  SENT             // Enviada al cliente
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ScrapingStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+enum AlertType {
+  STOCK
+  PRICE
+}
+
+// =============================================
+// EMPRESAS CLIENTES
+// =============================================
+
+model Company {
+  id                  String        @id @default(cuid())
+  name                String
+  legalName           String
+  cedula              String        @unique  // Cédula jurídica
+  type                CompanyType
+  status              CompanyStatus @default(PENDING)
+
+  // Zona Franca
+  exonerationCode     String?       // Código exoneración DGA
+  exonerationExpiry   DateTime?
+
+  // Crédito
+  creditLimit         Decimal       @default(0) @db.Decimal(12, 2)
+  creditTermsDays     Int           @default(0)
+  currentBalance      Decimal       @default(0) @db.Decimal(12, 2)
+
+  // Contacto
+  phone               String?
+  address             String?
+  canton              String?
+  province            String?
+
+  // Emails
+  invoiceEmail        String?       // Email para recibir facturas
+  quoteEmail          String?       // Email para recibir cotizaciones
+
+  // Preferencias
+  preferredCurrency   Currency      @default(CRC)
+
+  // Metadata
+  approvedAt          DateTime?
+  approvedBy          String?       // AritthUser ID
+  rejectionReason     String?
+  notes               String?
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  // Relaciones
+  users               User[]
+  addresses           Address[]
+  quotes              Quote[]
+  orders              Order[]
+  invoices            Invoice[]
+  creditHistory       CreditHistory[]
+  recurringOrders     RecurringOrder[]
+  approvalRequests    ApprovalRequest[]
+
+  @@index([status])
+  @@index([cedula])
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  companyId   String
+  label       String   // Ej: "Planta Principal", "Bodega Norte"
+  address     String
+  canton      String
+  province    String
+  contactName String?
+  contactPhone String?
+  isDefault   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  company     Company  @relation(fields: [companyId], references: [id])
+}
+
+// =============================================
+// USUARIOS CLIENTE
+// =============================================
+
+model User {
+  id          String      @id @default(cuid())
+  clerkId     String      @unique
+  companyId   String
+  email       String      @unique
+  name        String
+  role        CompanyRole @default(PURCHASER)
+  phone       String?
+  isActive    Boolean     @default(true)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  company     Company     @relation(fields: [companyId], references: [id])
+  carts       Cart[]
+  quotes      Quote[]
+  orders      Order[]
+  stockAlerts StockAlert[]
+  auditLogs   AuditLog[]
+
+  @@index([clerkId])
+  @@index([companyId])
+}
+
+// =============================================
+// USUARIOS ARITTH (BACK-OFFICE)
+// =============================================
+
+model AritthUser {
+  id        String     @id @default(cuid())
+  clerkId   String     @unique
+  email     String     @unique
+  name      String
+  role      AritthRole
+  isActive  Boolean    @default(true)
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([clerkId])
+}
+
+// =============================================
+// TIENDAS FUENTE (PRIVADO - No visible a clientes)
+// =============================================
+
+model SourceStore {
+  id              String   @id @default(cuid())
+  name            String   @unique  // "EPA", "Novex", "El Lagar", etc.
+  baseUrl         String
+  scraperClass    String   // "epa", "novex", "ellagar"
+  isActive        Boolean  @default(true)
+
+  // Horarios para filtro "Disponible Hoy"
+  operatingDays   String[] // ["LUNES","MARTES",...,"VIERNES"]
+  openingHour     Int      @default(8)
+  closingHour     Int      @default(17)
+
+  // Scraping config
+  lastScrapedAt   DateTime?
+  scrapingIntervalHours Int @default(12)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  products        Product[]
+  scrapingJobs    ScrapingJob[]
+
+  @@index([isActive])
+}
+
+// =============================================
+// PRODUCTOS
+// =============================================
+
+model Product {
+  id              String      @id @default(cuid())
+  storeId         String
+  externalId      String      // ID en la tienda fuente
+  externalUrl     String
+
+  name            String
+  description     String?
+  brand           String?
+  model           String?
+  sku             String?
+  category        String
+  subcategory     String?
+  unit            String      @default("unidad")
+
+  // Precio de la tienda (sin IVA)
+  storePrice      Decimal     @db.Decimal(12, 2)
+  inStock         Boolean     @default(true)
+  imageUrl        String?
+
+  // Embedding para búsqueda semántica
+  embedding       Unsupported("vector(768)")?
+
+  // Metadata
+  isActive        Boolean     @default(true)
+  lastSeenAt      DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  store           SourceStore @relation(fields: [storeId], references: [id])
+  priceHistory    PriceHistory[]
+  quoteItems      QuoteItem[]
+  cartItems       CartItem[]
+  stockAlerts     StockAlert[]
+
+  @@unique([storeId, externalId])
+  @@index([category])
+  @@index([inStock])
+  @@index([isActive])
+  @@index([storeId])
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  productId  String
+  storePrice Decimal  @db.Decimal(12, 2)
+  recordedAt DateTime @default(now())
+
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId, recordedAt])
+}
+
+// =============================================
+// SCRAPING JOBS
+// =============================================
+
+model ScrapingJob {
+  id            String         @id @default(cuid())
+  storeId       String
+  status        ScrapingStatus @default(QUEUED)
+
+  productsFound    Int?
+  productsUpdated  Int?
+  errors           String[]
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime       @default(now())
+
+  store         SourceStore    @relation(fields: [storeId], references: [id])
+
+  @@index([storeId, createdAt])
+  @@index([status])
+}
+
+// =============================================
+// CARRITO
+// =============================================
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+
+  @@index([userId, isActive])
+}
+
+model CartItem {
+  id          String   @id @default(cuid())
+  cartId      String
+  productId   String
+  quantity    Int      @default(1)
+
+  cart        Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+}
+
+// =============================================
+// COTIZACIONES (AMT-COT-YYYY-XXXXXX)
+// =============================================
+
+model Quote {
+  id            String      @id @default(cuid())
+  number        String      @unique  // AMT-COT-2025-000001
+  companyId     String
+  userId        String
+  status        QuoteStatus @default(DRAFT)
+
+  // Montos en CRC
+  subtotal      Decimal     @db.Decimal(14, 2)
+  ivaAmount     Decimal     @db.Decimal(14, 2)
+  shipping      Decimal     @db.Decimal(14, 2) @default(0)
+  total         Decimal     @db.Decimal(14, 2)
+
+  // Equivalentes en otras monedas (al momento de crear)
+  totalUsd      Decimal?    @db.Decimal(14, 2)
+  totalEur      Decimal?    @db.Decimal(14, 2)
+  exchangeRateUsd Decimal?  @db.Decimal(10, 4)
+  exchangeRateEur Decimal?  @db.Decimal(10, 4)
+
+  // PDF
+  pdfUrl        String?
+
+  // Notas
+  notes         String?
+  deliveryNotes String?
+
+  // Expiración (30 días)
+  expiresAt     DateTime
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  company       Company     @relation(fields: [companyId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+  items         QuoteItem[]
+  order         Order?
+
+  @@index([companyId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model QuoteItem {
+  id            String   @id @default(cuid())
+  quoteId       String
+  productId     String
+  quantity      Int
+  unit          String
+
+  // Precios desglosados (en CRC)
+  storePrice    Decimal  @db.Decimal(12, 2)   // Precio tienda
+  aritthCost    Decimal  @db.Decimal(12, 2)   // Con IVA compra (×1.13)
+  unitPrice     Decimal  @db.Decimal(12, 2)   // Con margen (×1.10)
+  ivaRate       Decimal  @db.Decimal(5, 4)    // 0 o 0.13
+  ivaAmount     Decimal  @db.Decimal(12, 2)
+  lineTotal     Decimal  @db.Decimal(14, 2)
+
+  // Descripción al momento de cotizar
+  productName   String
+  productSku    String?
+  imageUrl      String?
+
+  quote         Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product       Product  @relation(fields: [productId], references: [id])
+}
+
+// =============================================
+// ÓRDENES (AMT-ORD-YYYY-XXXXXX)
+// =============================================
+
+model Order {
+  id            String      @id @default(cuid())
+  number        String      @unique  // AMT-ORD-2025-000001
+  companyId     String
+  userId        String
+  quoteId       String      @unique
+  status        OrderStatus @default(CONFIRMED)
+
+  // PO del cliente
+  poNumber      String
+  poEmail       String?
+
+  // Montos
+  total         Decimal     @db.Decimal(14, 2)
+
+  // Entrega
+  addressId     String?
+  deliveryNotes String?
+  estimatedDelivery DateTime?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  company       Company     @relation(fields: [companyId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+  quote         Quote       @relation(fields: [quoteId], references: [id])
+  invoice       Invoice?
+
+  @@index([companyId])
+  @@index([status])
+  @@index([poNumber])
+}
+
+// =============================================
+// FACTURAS (AMT-FAC-YYYY-XXXXXX)
+// =============================================
+
+model Invoice {
+  id              String        @id @default(cuid())
+  number          String        @unique  // AMT-FAC-2025-000001
+  companyId       String
+  orderId         String        @unique
+  status          InvoiceStatus @default(PENDING_REVIEW)
+
+  // Montos
+  subtotal        Decimal       @db.Decimal(14, 2)
+  ivaAmount       Decimal       @db.Decimal(14, 2)
+  total           Decimal       @db.Decimal(14, 2)
+
+  // PDF
+  pdfUrl          String?
+
+  // Vencimiento
+  dueDate         DateTime
+  paidAt          DateTime?
+
+  // Revisión interna Aritth
+  reviewedBy      String?       // AritthUser ID
+  reviewedAt      DateTime?
+  reviewNotes     String?
+
+  // GTI (futuro - por ahora manual)
+  gtiCode         String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  company         Company       @relation(fields: [companyId], references: [id])
+  order           Order         @relation(fields: [orderId], references: [id])
+  notes           InternalNote[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// =============================================
+// TIPOS DE CAMBIO
+// =============================================
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  usdRate   Decimal  @db.Decimal(10, 4)
+  eurRate   Decimal  @db.Decimal(10, 4)
+  source    String   @default("exchangerate-api")
+
+  createdAt DateTime @default(now())
+
+  @@unique([date])
+  @@index([date])
+}
+
+// =============================================
+// CRÉDITO
+// =============================================
+
+model CreditHistory {
+  id          String   @id @default(cuid())
+  companyId   String
+  amount      Decimal  @db.Decimal(12, 2)
+  type        String   // "CHARGE" | "PAYMENT"
+  reference   String?  // Número de factura/pago
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  company     Company  @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+}
+
+// =============================================
+// ALERTAS DE STOCK / PRECIO
+// =============================================
+
+model StockAlert {
+  id          String    @id @default(cuid())
+  userId      String
+  productId   String
+  type        AlertType
+  targetPrice Decimal?  @db.Decimal(12, 2)
+  isActive    Boolean   @default(true)
+  notifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId, type])
+}
+
+// =============================================
+// ÓRDENES RECURRENTES
+// =============================================
+
+model RecurringOrder {
+  id            String   @id @default(cuid())
+  companyId     String
+  name          String
+  items         Json     // Array de { productId, quantity }
+  frequencyDays Int      // Cada X días
+  nextRunAt     DateTime
+  isActive      Boolean  @default(true)
+  optedOut      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  company       Company  @relation(fields: [companyId], references: [id])
+}
+
+// =============================================
+// SOLICITUDES DE APROBACIÓN
+// =============================================
+
+model ApprovalRequest {
+  id          String   @id @default(cuid())
+  companyId   String
+  type        String   // "REGISTRATION" | "CREDIT_INCREASE"
+  status      String   @default("PENDING")
+  data        Json
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  company     Company  @relation(fields: [companyId], references: [id])
+
+  @@index([status])
+}
+
+// =============================================
+// NOTAS INTERNAS
+// =============================================
+
+model InternalNote {
+  id        String   @id @default(cuid())
+  invoiceId String
+  authorId  String   // AritthUser ID
+  content   String
+  createdAt DateTime @default(now())
+
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+}
+
+// =============================================
+// AUDIT LOG
+// =============================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String
+  data      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
