@@ -190,8 +190,8 @@ function parseProductPage(
         category: categoryName,
         storePrice,
         inStock,
-        imageUrl: imageUrl || undefined,
-        sku: sku || undefined,
+        ...(imageUrl ? { imageUrl } : {}),
+        ...(sku ? { sku } : {}),
         unit: 'unidad',
       });
     } catch {
@@ -215,15 +215,4 @@ export async function scrapeNovexOffers(): Promise<ScrapedProduct[]> {
   const allOffers: ScrapedProduct[] = [];
 
   for (const url of offerUrls) {
-    const html = await fetchPage(url);
-    if (!html) continue;
-
-    const offers = parseProductPage(html, 'Ofertas', url);
-    allOffers.push(...offers);
-    await sleep(DELAY_MS);
-  }
-
-  return allOffers;
-}
-
-export { BASE_URL as NOVEX_BASE_URL };
+    const html = await fetchPage

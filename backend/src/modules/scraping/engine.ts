@@ -110,14 +110,14 @@ async function upsertProduct(storeId: string, p: ScrapedProduct): Promise<void> 
   const data = {
     externalUrl: p.externalUrl,
     name: p.name,
-    description: p.description,
-    brand: p.brand,
-    sku: p.sku,
+    ...(p.description !== undefined ? { description: p.description } : {}),
+    ...(p.brand !== undefined ? { brand: p.brand } : {}),
+    ...(p.sku !== undefined ? { sku: p.sku } : {}),
     category: p.category,
-    subcategory: p.subcategory,
+    ...(p.subcategory !== undefined ? { subcategory: p.subcategory } : {}),
     storePrice: p.storePrice,
     inStock: p.inStock,
-    imageUrl: p.imageUrl,
+    ...(p.imageUrl !== undefined ? { imageUrl: p.imageUrl } : {}),
     unit: p.unit,
     isActive: true,
     lastSeenAt: new Date(),
@@ -192,11 +192,4 @@ async function notifyStockAlerts(productId: string): Promise<void> {
 }
 
 /**
- * Crea un nuevo job de scraping y lo encola
- */
-export async function createScrapingJob(storeId: string): Promise<string> {
-  const job = await prisma.scrapingJob.create({
-    data: { storeId, status: 'QUEUED' },
-  });
-  return job.id;
-}
+ * Crea un nuevo job de scraping y lo encola

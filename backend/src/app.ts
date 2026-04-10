@@ -24,9 +24,9 @@ export async function buildApp() {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === 'development' ? 'debug' : 'info',
-      transport: env.NODE_ENV === 'development'
-        ? { target: 'pino-pretty', options: { colorize: true } }
-        : undefined,
+      ...(env.NODE_ENV === 'development'
+        ? { transport: { target: 'pino-pretty', options: { colorize: true } } }
+        : {}),
     },
     trustProxy: true,
   });
@@ -179,12 +179,4 @@ export async function buildApp() {
 
     // Error interno
     app.log.error(error);
-    return reply.status(500).send({
-      statusCode: 500,
-      error: 'INTERNAL_ERROR',
-      message: env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
-    });
-  });
-
-  return app;
-}
+    return reply.status(500).send(

@@ -1,7 +1,3 @@
-// ⚠️ ARCHIVO MOVIDO — Next.js requiere que middleware viva en src/middleware.ts
-// Este archivo NO funciona como middleware desde app/. Ver: src/middleware.ts
-// Puedes eliminar este archivo con seguridad.
-// ---
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 

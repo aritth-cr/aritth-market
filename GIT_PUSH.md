@@ -1,13 +1,28 @@
 # 🚀 GIT — Instrucciones para sincronizar con GitHub (ACTUALIZADO 2026-04-10)
 
-> Ejecutar UNA VEZ desde la terminal de tu computadora en la carpeta del proyecto.
+> Git push ya ejecutado ✅ — Este archivo ahora aplica solo para el commit de TypeScript fixes.
 
-## Contexto
-El código local está completo (~85%) pero NO está en GitHub.
-El filesystem del entorno Cowork no soporta `git init` directamente.
-**Kevin debe ejecutar estos comandos desde su PC.**
+## Estado actual (2026-04-10)
+- El repo está en GitHub: origin/main ✅
+- Claude hizo un audit estático y corrigió errores TypeScript en 7 archivos backend + frontend middleware
+- **Kevin debe commitear estos cambios y correr el build**
 
-## Comandos (copiar y pegar en terminal)
+## ⚡ Commit rápido (ejecutar desde "App Market/aritth-app")
+
+```bash
+# Desde la carpeta "App Market/aritth-app":
+git add -A
+git commit -m "fix: TypeScript audit — exactOptionalPropertyTypes fixes + middleware location + tsconfig"
+git push origin master:main
+
+# Luego instalar dependencias y build:
+cd backend && npm install && npm run build && cd ..
+cd frontend && npm install && npm run build && cd ..
+```
+
+---
+
+## Comandos originales (para referencia)
 
 ```bash
 # 1. Ir a la carpeta del proyecto
@@ -84,8 +99,4 @@ aritth-market/
 ## Post-push: configurar Railway
 
 Después del push, Railway debería detectar el repositorio automáticamente.
-Verificar que las variables de entorno en Railway coincidan con `.env.example`.
-
----
-
-*Creado automáticamente por Claude — Aritth Market Team*
+Verificar que las variables de entorno en Railway coincidan 

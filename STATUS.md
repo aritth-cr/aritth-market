@@ -5,8 +5,10 @@
 ---
 
 ## 🎯 Próxima tarea
-- **Fase 5: Deploy** — Railway (backend) + Vercel (frontend). **Bloqueado** hasta que Kevin haga `git push` desde su PC.
-- Kevin debe ejecutar los comandos en `GIT_PUSH.md` antes de continuar.
+- **Fase 5: Deploy** — Railway (backend) + Vercel (frontend)
+- Git push ya completado por Kevin ✅
+- **PENDIENTE**: Kevin debe ejecutar `npm install` y `npm run build` desde su PC (ver GIT_PUSH.md pasos 8-10)
+- Los errores TypeScript del audit estático ya fueron corregidos en esta sesión
 
 ---
 
@@ -47,7 +49,9 @@
 |---------|-------------|--------|
 | `app/layout.tsx` | Layout raíz con Clerk | ✅ Completo |
 | `app/page.tsx` | Landing / redirect | ✅ Completo |
-| `app/middleware.ts` | Middleware de autenticación | ✅ Completo |
+| `app/middleware.ts` | ⚠️ ARCHIVO MOVIDO — ver src/middleware.ts | 🔄 Deprecado |
+| `middleware.ts` | Middleware Clerk en ubicación correcta (src/) | ✅ Completo |
+| `tsconfig.json` | Configuración TypeScript Next.js 15 | ✅ Creado |
 | `app/(auth)/sign-in` | Página sign-in Clerk | ✅ Completo |
 | `app/(auth)/sign-up` | Página sign-up Clerk | ✅ Completo |
 | `app/(client)/catalog/page.tsx` | Página catálogo | ✅ Completo |
@@ -144,8 +148,8 @@ Numeración documentos:
 
 | Fecha | Tarea completada |
 |-------|-----------------|
+| 2026-04-10 | Audit estático TypeScript completo: 7 archivos backend corregidos (exactOptionalPropertyTypes), middleware movido a src/, tsconfig.json creado en frontend |
 | 2026-04-09 | Setup inicial: creados todos los módulos backend + frontend completos |
 | 2026-04-09 | Creado STATUS.md para gestión eficiente de sesiones |
 | 2026-04-09 | Completado orders/routes.ts (501 líneas), creado invoices/routes.ts (629 líneas), types/index.ts, hooks/index.ts, .env.example x4, next.config.ts actualizado, app.ts con invoice+cart/count registrados, lib/api.ts extendido con invoicesApi+ordersApi completo |
-| 2026-04-09 | Fase 3: AdminLayout.tsx (dark sidebar, 5 nav, mobile drawer), (admin)/layout.tsx (auth guard). Copilot review OK, fix IIFE. |
-| 2026-04-09 | Fase 4: modules/invoices/cron.ts (BullMQ CRON SENT→OVERDUE cada hora) + wiring en server.ts con graceful shutdown. |
+| 2026-04-09 | Fase 3: AdminLayout.tsx (dark sidebar, 5 nav, mobile drawer), (admin)/layout.tsx (auth guard). Copilot review O

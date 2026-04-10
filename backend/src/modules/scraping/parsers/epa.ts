@@ -152,17 +152,9 @@ async function scrapeCategoryPage(
           category,
           storePrice,
           inStock,
-          imageUrl: imageUrl?.startsWith('http') ? imageUrl : undefined,
-          sku,
+          ...(imageUrl?.startsWith('http') ? { imageUrl } : {}),
+          ...(sku ? { sku } : {}),
           unit: 'unidad',
         });
       } catch {
-        // Continuar con siguiente producto
-      }
-    });
-
-    return products;
-  }, categoryName, BASE_URL) as Promise<ScrapedProduct[]>;
-}
-
-export { BASE_URL as EPA_BASE_URL };
+        // Continuar c

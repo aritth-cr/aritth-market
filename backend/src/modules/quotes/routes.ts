@@ -134,7 +134,7 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
         totalEur: totals.totalEur,
         exchangeRateUsd: rates.usdRate,
         exchangeRateEur: rates.eurRate,
-        notes: body.notes,
+        ...(body.notes !== undefined ? { notes: body.notes } : {}),
         expiresAt,
         items: {
           create: itemsWithPricing.map(i => ({
@@ -166,13 +166,15 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
         legalName: company.legalName,
         cedula: company.cedula,
         type: company.type,
-        address: company.address ?? undefined,
-        phone: company.phone ?? undefined,
-        email: company.quoteEmail ?? company.invoiceEmail ?? undefined,
+        ...(company.address != null ? { address: company.address } : {}),
+        ...(company.phone != null ? { phone: company.phone } : {}),
+        ...((company.quoteEmail ?? company.invoiceEmail) != null
+          ? { email: (company.quoteEmail ?? company.invoiceEmail)! }
+          : {}),
       },
       items: itemsWithPricing.map(i => ({
         description: i.product.name,
-        sku: i.product.sku ?? undefined,
+        ...(i.product.sku != null ? { sku: i.product.sku } : {}),
         quantity: i.quantity,
         unit: i.product.unit,
         unitPrice: i.pricing.subtotalUnit,
@@ -186,7 +188,7 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
       total: totals.total,
       totalUsd: totals.totalUsd,
       exchangeRateUsd: rates.usdRate,
-      notes: body.notes,
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
     });
 
     // Guardar PDF
@@ -388,21 +390,4 @@ export async function quoteRoutes(app: FastifyInstance): Promise<void> {
 
     const recipients = [company.invoiceEmail, company.quoteEmail].filter(Boolean) as string[];
     if (recipients.length > 0) {
-      await sendOrderConfirmationEmail({
-        to: recipients,
-        orderNumber,
-        quoteNumber: quote.number,
-        companyName: company.name,
-        poNumber,
-        total: Number(quote.total),
-      });
-    }
-
-    return reply.status(201).send({
-      orderId: order.id,
-      orderNumber,
-      invoiceNumber,
-      message: 'Orden confirmada. Su factura está en revisión.',
-    });
-  });
-}
+      await sendOrder

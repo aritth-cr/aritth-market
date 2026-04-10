@@ -14,8 +14,8 @@ function getRedisConnection() {
   return {
     host: url.hostname,
     port: Number(url.port) || 6379,
-    password: url.password || undefined,
-    tls: url.protocol === 'rediss:' ? {} : undefined,
+    ...(url.password ? { password: url.password } : {}),
+    ...(url.protocol === 'rediss:' ? { tls: {} } : {}),
   };
 }
 
@@ -68,5 +68,3 @@ export async function registerOverdueCron() {
       jobId: 'overdue-cron-singleton',
     },
   );
-  console.log('[invoice-overdue] CRON registrado — cada hora');
-}

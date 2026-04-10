@@ -5,11 +5,11 @@
 
 ## 🔴 BLOQUEADORES (requieren Kevin desde Windows)
 
-1. **npm install**: `cd backend && npm install && npm run build` → `cd frontend && npm install`
+1. **npm install + build**: `cd backend && npm install && npm run build` → `cd frontend && npm install && npm run build`
    - Motivo: sandbox bloquea npm registry (403). Debe correr en PC de Kevin.
-2. **git push**: Repo sin remote + bindfs bloquea git desde sandbox
-   - Seguir instrucciones en GIT_PUSH.md (pasos 1-12)
-   - Rama local: `master` → remoto: `main` en GitHub
+   - Los errores TypeScript estáticos detectados YA FUERON CORREGIDOS (audit 2026-04-10)
+   - Commit los cambios del audit antes de hacer `npm run build`
+2. ~~**git push**~~ ✅ **COMPLETADO** — Kevin ejecutó push a origin/main
 
 ## 🟡 SIGUIENTE (después de git push)
 
@@ -49,6 +49,8 @@
 
 | Fecha | Tarea |
 |-------|-------|
+| 2026-04-10 | Audit estático TypeScript backend: corregidos exactOptionalPropertyTypes en cron.ts, back-office/routes.ts, engine.ts, quotes/routes.ts, parsers/epa.ts, parsers/novex.ts, app.ts |
+| 2026-04-10 | Frontend: middleware movido a src/middleware.ts (estaba en src/app/middleware.ts — no funcionaba), tsconfig.json creado |
 | 2026-04-09 | orders/routes.ts completo (501L) |
 | 2026-04-09 | invoices/routes.ts creado (629L) |
 | 2026-04-09 | frontend/src/types/index.ts |
@@ -56,4 +58,4 @@
 | 2026-04-09 | .env.example x4 (backend+frontend dev+prod) |
 | 2026-04-09 | next.config.ts con dominios imágenes |
 | 2026-04-09 | app.ts: invoicesRoutes + cart/count endpoint |
-| 2026-04-09 | lib/api.ts: invoicesApi + ordersApi extendido |
+| 202

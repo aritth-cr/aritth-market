@@ -214,7 +214,7 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
         status: 'APPROVED',
         reviewedBy: user.id,
         reviewedAt: new Date(),
-        reviewNotes: notes,
+        ...(notes !== undefined ? { reviewNotes: notes } : {}),
       },
     });
 
@@ -358,13 +358,4 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
   // ---- PRECIOS ----
 
   // GET /api/admin/pricing/margin — Ver margen actual
-  app.get('/pricing/margin', {
-    preHandler: [requireAritthRole(['SUPER_ADMIN', 'ADMIN', 'FINANCE'])],
-  }, async () => {
-    return {
-      currentMargin: Number(process.env['DEFAULT_MARGIN'] ?? 0.10) * 100,
-      ivaRate: Number(process.env['IVA_RATE'] ?? 0.13) * 100,
-      note: 'Para cambiar el margen, actualiza DEFAULT_MARGIN en el .env y reinicia el servidor',
-    };
-  });
-}
+  app.get('/pricing/margin
