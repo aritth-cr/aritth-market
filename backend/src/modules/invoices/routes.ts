@@ -415,7 +415,7 @@ export async function invoicesRoutes(app: FastifyInstance) {
             status: 'APPROVED',
             reviewedBy: aritthUser.id,
             reviewedAt: now,
-            gtiCode: body.gtiCode,
+            gtiCode: body.gtiCode ?? null,
           },
           include: {
             order: {
@@ -440,7 +440,7 @@ export async function invoicesRoutes(app: FastifyInstance) {
             status: 'CANCELLED',
             reviewedBy: aritthUser.id,
             reviewedAt: now,
-            reviewNotes: body.reviewNotes,
+            reviewNotes: body.reviewNotes ?? null,
           },
           include: {
             order: {
@@ -585,6 +585,45 @@ export async function invoicesRoutes(app: FastifyInstance) {
    */
   app.post<{ Params: { id: string }; Body: any }>(
     '/api/invoices/admin/:id/notes',
+    { onRequest: [requireAritth] },
+    async (request, reply) => {
+      const aritthUser = (request as any).aritthUser;
+      const { id } = request.params;
+
+      let body;
+      try {
+        body = noteSchema.parse(request.body);
+      } catch (_error) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'VALIDATION_ERROR',
+          message: 'Datos inválidos',
+        });
+      }
+
+      const invoice = await prisma.invoice.findUnique({ where: { id } });
+      if (!invoice) {
+        return reply.code(404).send({ statusCode: 404, error: 'NOT_FOUND', message: 'Factura no encontrada' });
+      }
+
+      const note = await prisma.internalNote.create({
+        data: {
+          invoiceId: id,
+          authorId: aritthUser.id,
+          content: body.content,
+        },
+      });
+
+      return reply.send(note);
+    },
+  );
+
+  /**
+   * POST /api/invoices/:id/notes  (alias — compat with frontend apiFetch)
+   * Mirrors /api/invoices/admin/:id/notes so the frontend can call either path.
+   */
+  app.post<{ Params: { id: string }; Body: any }>(
+    '/api/invoices/:id/notes',
     { onRequest: [requireAritth] },
     async (request, reply) => {
       const aritthUser = (request as any).aritthUser;

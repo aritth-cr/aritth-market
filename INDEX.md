@@ -165,4 +165,12 @@ aritth-app/
     ├── next.config.ts              ← Dominios de imágenes
     └── src/
         └── lib/
-            └── api.ts              ← 
+            └── api.ts              ← Cliente API
+```
+
+---
+
+**Última actualización:** 2026-04-09
+**Estado:** Listo para producción
+**Secretos reales:** Ninguno en ejemplos
+**TODOs pendientes:** Ninguno

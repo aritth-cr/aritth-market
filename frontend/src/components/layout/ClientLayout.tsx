@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -14,25 +14,59 @@ import {
   X,
   Search,
   Bell,
-  ChevronDown,
+  ClipboardList,
 } from 'lucide-react';
+import { cartApi } from '@/lib/api';
 
 const NAV_ITEMS = [
   { href: '/catalog', label: 'Catálogo', icon: Package },
   { href: '/quotes', label: 'Cotizaciones', icon: FileText },
   { href: '/orders', label: 'Órdenes', icon: ShoppingCart },
+  { href: '/invoices', label: 'Facturas', icon: FileText },
+  { href: '/procurement', label: 'Compras', icon: ClipboardList },
   { href: '/profile', label: 'Mi Empresa', icon: User },
 ];
 
 interface ClientLayoutProps {
   children: React.ReactNode;
+  token?: string;
   cartCount?: number;
 }
 
-export function ClientLayout({ children, cartCount = 0 }: ClientLayoutProps) {
+export function ClientLayout({ children, token, cartCount: initialCartCount = 0 }: ClientLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cartCount, setCartCount] = useState(initialCartCount);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Cargar count del carrito dinámicamente si tenemos token
+  useEffect(() => {
+    if (!token) return;
+    cartApi.count(token)
+      .then(res => setCartCount(res.count))
+      .catch(() => { /* silencioso */ });
+  }, [token]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) {
+      router.push(`/catalog?q=${encodeURIComponent(q)}`);
+      setMobileOpen(false);
+    }
+  };
+
+  const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const q = searchQuery.trim();
+      if (q) {
+        router.push(`/catalog?q=${encodeURIComponent(q)}`);
+        setMobileOpen(false);
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] flex flex-col">
@@ -50,17 +84,18 @@ export function ClientLayout({ children, cartCount = 0 }: ClientLayoutProps) {
             </span>
           </Link>
 
-          {/* Búsqueda */}
-          <div className="flex-1 max-w-lg mx-auto relative hidden md:block">
+          {/* Búsqueda funcional */}
+          <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-auto relative hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKey}
               placeholder="Buscar productos... (ej: sargentos, cable 12AWG)"
               className="w-full bg-[#242424] border border-[#333] rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#5F6C4E] transition-colors"
             />
-          </div>
+          </form>
 
           {/* Nav desktop */}
           <nav className="hidden lg:flex items-center gap-1">
@@ -122,14 +157,16 @@ export function ClientLayout({ children, cartCount = 0 }: ClientLayoutProps) {
           >
             <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
               {/* Mobile search */}
-              <div className="relative mb-2">
+              <form onSubmit={handleSearch} className="relative mb-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Buscar productos..."
                   className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#5F6C4E]"
                 />
-              </div>
+              </form>
               {NAV_ITEMS.map(item => (
                 <Link
                   key={item.href}
@@ -157,7 +194,6 @@ export function ClientLayout({ children, cartCount = 0 }: ClientLayoutProps) {
 
       {/* Footer */}
       <footer className="bg-[#1a1a1a] border-t border-[#333] py-4 text-center">
- 
         <p className="text-xs text-gray-500">© 2025 Aritth Market. Todos los derechos reservados.</p>
       </footer>
     </div>

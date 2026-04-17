@@ -15,11 +15,17 @@ import {
   X,
   ChevronRight,
   Shield,
+  Users,
+  Package,
+  DollarSign,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/companies', label: 'Empresas', icon: Building2 },
+  { href: '/suppliers', label: 'Proveedores', icon: Users },
+  { href: '/products', label: 'Productos', icon: Package },
+  { href: '/pricing', label: 'Precios', icon: DollarSign },
   { href: '/invoices', label: 'Facturas', icon: FileText },
   { href: '/finance', label: 'Finanzas', icon: TrendingUp },
   { href: '/scraping', label: 'Scraping', icon: RefreshCw },

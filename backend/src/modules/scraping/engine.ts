@@ -1,18 +1,54 @@
+// scraping/engine.ts
+// Multi-source scraping engine — replaces the hardcoded EPA/Novex switch.
+// Adapter is selected dynamically based on SourceStore.sourceKind.
+
 import { prisma } from '../../shared/prisma/client.js';
-import { scrapeEPA } from './parsers/epa.js';
-import { scrapeNovex } from './parsers/novex.js';
 import { generateProductEmbedding } from '../search/service.js';
 import { sendQuoteEmail } from '../../shared/utils/mailer.js';
-import type { ScrapedProduct } from './parsers/epa.js';
+
+import type { ScrapingAdapter, ScrapedProduct, SourceStoreRecord, ScrapingContext } from './adapters/base.js';
+import { directSupplierAdapter } from './adapters/direct-supplier.js';
+import { aggregatorAdapter } from './adapters/aggregator.js';
+import { procurementPlatformAdapter } from './adapters/procurement-platform.js';
+import { manufacturerOfficialAdapter } from './adapters/manufacturer-official.js';
+
+// ──────────────────────────────────────────
+// Adapter registry — add new adapters here
+// ──────────────────────────────────────────
+
+const ADAPTERS: ScrapingAdapter[] = [
+  directSupplierAdapter,
+  aggregatorAdapter,
+  procurementPlatformAdapter,
+  manufacturerOfficialAdapter,
+];
+
+function selectAdapter(store: SourceStoreRecord): ScrapingAdapter | null {
+  return ADAPTERS.find(a => a.supports(store)) ?? null;
+}
+
+// ──────────────────────────────────────────
+// Core engine functions
+// ──────────────────────────────────────────
 
 /**
  * Ejecuta el scraping de una tienda específica.
  * Actualiza el ScrapingJob con progreso y resultado.
  */
 export async function runScraping(storeId: string, jobId: string): Promise<void> {
-  const store = await prisma.sourceStore.findUniqueOrThrow({
-    where: { id: storeId },
-  });
+  const store = await prisma.sourceStore.findUnique({ where: { id: storeId } });
+
+  if (!store) {
+    throw new Error(`SourceStore not found: ${storeId}`);
+  }
+
+  const adapter = selectAdapter(store as SourceStoreRecord);
+  if (!adapter) {
+    throw new Error(
+      `No scraping adapter available for store "${store.name ?? storeId}" ` +
+      `(sourceKind="${(store as any).sourceKind ?? 'unknown'}")`,
+    );
+  }
 
   // Marcar job como RUNNING
   await prisma.scrapingJob.update({
@@ -25,36 +61,23 @@ export async function runScraping(storeId: string, jobId: string): Promise<void>
   const errors: string[] = [];
 
   try {
-    // Seleccionar scraper según la tienda
-    let products: ScrapedProduct[] = [];
-
-    const onProgress = (count: number) => {
-      productsFound = count;
-      console.log(`[${store.name}] Progreso: ${count} productos encontrados`);
+    const context: ScrapingContext = {
+      store: store as SourceStoreRecord,
+      jobId,
+      delayMs: (process.env.SCRAPING_DELAY_MS ? parseInt(process.env.SCRAPING_DELAY_MS) : 1000),
+      onProgress: (count: number) => {
+        productsFound = count;
+        console.log(`[${store.name}] Progreso: ${count} productos encontrados`);
+      },
     };
 
-    switch (store.scraperClass) {
-      case 'epa':
-        products = await scrapeEPA(onProgress);
-        break;
-      case 'novex':
-        products = await scrapeNovex(onProgress);
-        break;
-      default:
-        throw new Error(`Scraper desconocido: ${store.scraperClass}`);
-    }
-
+    const products = await adapter.collect(context);
     productsFound = products.length;
     console.log(`[${store.name}] Total productos: ${productsFound}`);
 
-    // Upsert productos en lotes de 50
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < products.length; i += BATCH_SIZE) {
-      const batch = products.slice(i, i + BATCH_SIZE);
-
-      await Promise.all(batch.map(p => upsertProduct(storeId, p)));
-      productsUpdated += batch.length;
-    }
+    // Persist results in batches
+    await persistIndexedResults(store as SourceStoreRecord, products);
+    productsUpdated = products.length;
 
     // Marcar tiendas que quedaron sin ver como inactivas
     await prisma.product.updateMany({
@@ -101,6 +124,21 @@ export async function runScraping(storeId: string, jobId: string): Promise<void>
   }
 }
 
+/**
+ * Persists scraped products to the database in batches of 50.
+ * Handles price history and embedding generation.
+ */
+export async function persistIndexedResults(
+  store: SourceStoreRecord,
+  products: ScrapedProduct[],
+): Promise<void> {
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < products.length; i += BATCH_SIZE) {
+    const batch = products.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(p => upsertProduct(store.id, p)));
+  }
+}
+
 async function upsertProduct(storeId: string, p: ScrapedProduct): Promise<void> {
   const existing = await prisma.product.findUnique({
     where: { storeId_externalId: { storeId, externalId: p.externalId } },
@@ -124,7 +162,6 @@ async function upsertProduct(storeId: string, p: ScrapedProduct): Promise<void> 
   };
 
   if (!existing) {
-    // Nuevo producto
     const created = await prisma.product.create({
       data: { ...data, storeId, externalId: p.externalId },
     });
@@ -138,19 +175,14 @@ async function upsertProduct(storeId: string, p: ScrapedProduct): Promise<void> 
       p.brand,
     );
   } else {
-    // Producto existente - registrar cambio de precio si cambió
     if (Number(existing.storePrice) !== p.storePrice) {
       await prisma.priceHistory.create({
         data: { productId: existing.id, storePrice: p.storePrice },
       });
     }
 
-    await prisma.product.update({
-      where: { id: existing.id },
-      data,
-    });
+    await prisma.product.update({ where: { id: existing.id }, data });
 
-    // Notificar alertas de stock si volvió a estar disponible
     if (!existing.inStock && p.inStock) {
       void notifyStockAlerts(existing.id);
     }
@@ -203,4 +235,4 @@ export async function createScrapingJob(storeId: string): Promise<string> {
   });
 
   return job.id;
-}
+}

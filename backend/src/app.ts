@@ -16,6 +16,19 @@ import { invoicesRoutes } from './modules/invoices/routes.js';
 import { getOffersForHomepage } from './modules/scraping/offers.js';
 import { clerkWebhookRoutes } from './modules/webhooks/clerk.js';
 import { AppError } from './shared/errors/AppError.js';
+// FASE 3 — multi-source modules
+import { supplierRoutes } from './modules/suppliers/routes.js';
+import { supplierOfferRoutes } from './modules/supplier-offers/routes.js';
+import { technicalDocumentRoutes } from './modules/technical-documents/routes.js';
+import { promotionRoutes } from './modules/promotions/routes.js';
+import { operationalAlertRoutes } from './modules/operational-alerts/routes.js';
+// FASE 4 — rebuilt search engine
+import { searchRoutes } from './modules/search/routes.js';
+// FASE 7B — procurement module
+import { procurementRoutes } from './modules/procurement/routes.js';
+// FASE 7C — external API modules
+import { partnerApiRoutes } from './modules/partner-api/routes.js';
+import { supplierApiRoutes } from './modules/supplier-api/routes.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -91,6 +104,16 @@ export async function buildApp() {
     await api.register(quoteRoutes, { prefix: '/quotes' });
     await api.register(orderRoutes, { prefix: '/orders' });
     await api.register(invoicesRoutes, { prefix: '/invoices' });
+    // FASE 3 — multi-source routes
+    await api.register(supplierRoutes, { prefix: '/suppliers' });
+    await api.register(supplierOfferRoutes, { prefix: '/supplier-offers' });
+    await api.register(technicalDocumentRoutes, { prefix: '/technical-documents' });
+    await api.register(promotionRoutes, { prefix: '/promotions' });
+    await api.register(operationalAlertRoutes, { prefix: '/operational-alerts' });
+    // FASE 4 — rebuilt search engine
+    await api.register(searchRoutes, { prefix: '/search' });
+    // FASE 7B — procurement
+    await api.register(procurementRoutes, { prefix: '/procurement' });
 
     // Rutas de carrito
     await api.register(async (cartApi) => {
@@ -148,6 +171,12 @@ export async function buildApp() {
 
   // ---- RUTAS ADMIN (BACK-OFFICE) ----
   await app.register(backOfficeRoutes, { prefix: '/api/admin' });
+
+  // ---- FASE 7C — EXTERNAL API v1 ----
+  // Partner API: authenticated by API key (Bearer token), public catalog access
+  await app.register(partnerApiRoutes, { prefix: '/api/v1' });
+  // Supplier API: authenticated by API key (Bearer token), catalog write access
+  await app.register(supplierApiRoutes, { prefix: '/api/v1/supplier' });
 
   // ---- MANEJO DE ERRORES GLOBAL ----
   app.setErrorHandler((error: any, _request, reply) => {

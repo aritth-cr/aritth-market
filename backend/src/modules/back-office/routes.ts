@@ -366,4 +366,616 @@ export async function backOfficeRoutes(app: FastifyInstance): Promise<void> {
       ivaRate: Number(process.env['IVA_RATE'] ?? 0.13),
     };
   });
+
+  // =============================================
+  // FASE 5 ADMIN ENDPOINTS
+  // =============================================
+
+  // ---- SUPPLIERS (ADMIN) ----
+
+  // GET /api/admin/suppliers — List suppliers with filters
+  app.get('/suppliers', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { search, page = 1, limit = 50 } = request.query as any;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      ...(search && {
+        OR: [
+          { displayName: { contains: search, mode: 'insensitive' } },
+          { internalCode: { contains: search, mode: 'insensitive' } },
+          { contactEmail: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const [suppliers, total] = await Promise.all([
+      prisma.supplier.findMany({
+        where,
+        skip,
+        take: limit,
+        include: { verifications: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.supplier.count({ where }),
+    ]);
+
+    return {
+      data: suppliers,
+      meta: { total, page, limit, hasMore: page * limit < total },
+    };
+  });
+
+  // GET /api/admin/suppliers/:id — Get supplier details
+  app.get('/suppliers/:id', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const supplier = await prisma.supplier.findUnique({
+      where: { id },
+      include: { verifications: true, pricingModels: true, landedCosts: true },
+    });
+    if (!supplier) return (request as any).server.httpErrors.notFound('Supplier not found');
+    return supplier;
+  });
+
+  // POST /api/admin/suppliers/:id/verify — Verify supplier
+  app.post('/suppliers/:id/verify', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { type, evidence, notes } = request.body as any;
+
+    const supplier = await prisma.supplier.findUnique({ where: { id } });
+    if (!supplier) return (request as any).server.httpErrors.notFound('Supplier not found');
+
+    const verification = await prisma.supplierVerification.upsert({
+      where: { supplierId_type: { supplierId: id, type } },
+      create: {
+        supplierId: id,
+        type,
+        evidence,
+        notes,
+        status: 'SUBMITTED',
+      },
+      update: {
+        evidence,
+        notes,
+        status: 'SUBMITTED',
+      },
+    });
+
+    return verification;
+  });
+
+  // POST /api/admin/suppliers/:id/approve — Approve supplier
+  app.post('/suppliers/:id/approve', {
+    preHandler: [requireAritth],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const user = (request as any).aritthUser;
+
+    const supplier = await prisma.supplier.findUnique({ where: { id } });
+    if (!supplier) return (request as any).server.httpErrors.notFound('Supplier not found');
+
+    // Mark all verifications as verified
+    await prisma.supplierVerification.updateMany({
+      where: { supplierId: id },
+      data: {
+        status: 'VERIFIED',
+        verifiedBy: user?.id,
+        verifiedAt: new Date(),
+      },
+    });
+
+    // Update supplier status
+    const updated = await prisma.supplier.update({
+      where: { id },
+      data: { verifiedBadge: true, isActive: true },
+      include: { verifications: true },
+    });
+
+    reply.status(200);
+    return updated;
+  });
+
+  // ---- PRODUCTS MASTER (ADMIN) ----
+
+  // GET /api/admin/products/master — List product master records
+  app.get('/products/master', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { search, page = 1, limit = 50 } = request.query as any;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      ...(search && {
+        OR: [
+          { canonicalName: { contains: search, mode: 'insensitive' } },
+          { sku: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const [products, total] = await Promise.all([
+      prisma.productMaster.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.productMaster.count({ where }),
+    ]);
+
+    return {
+      data: products,
+      meta: { total, page, limit, hasMore: page * limit < total },
+    };
+  });
+
+  // GET /api/admin/products/master/:id — Get product master details
+  app.get('/products/master/:id', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const product = await prisma.productMaster.findUnique({
+      where: { id },
+      include: { pricingModels: true, landedCosts: true },
+    });
+    if (!product) return (request as any).server.httpErrors.notFound('Product not found');
+    return product;
+  });
+
+  // POST /api/admin/products/master — Create product master
+  app.post('/products/master', {
+    preHandler: [requireAritth],
+  }, async (request, reply) => {
+    const { canonicalName, sku, manufacturerName, category, imageUrls } = request.body as any;
+
+    const product = await prisma.productMaster.create({
+      data: {
+        canonicalName,
+        normalizedName: canonicalName.toLowerCase().replace(/\s+/g, '-'),
+        sku,
+        manufacturerName,
+        category,
+        imageUrls: imageUrls || [],
+      },
+    });
+
+    reply.status(201);
+    return product;
+  });
+
+  // PUT /api/admin/products/master/:id — Update product master
+  app.put('/products/master/:id', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { canonicalName, manufacturerName, category, imageUrls } = request.body as any;
+
+    const product = await prisma.productMaster.update({
+      where: { id },
+      data: {
+        ...(canonicalName && { canonicalName, normalizedName: canonicalName.toLowerCase().replace(/\s+/g, '-') }),
+        ...(manufacturerName !== undefined && { manufacturerName }),
+        ...(category !== undefined && { category }),
+        ...(imageUrls && { imageUrls }),
+      },
+    });
+
+    return product;
+  });
+
+  // POST /api/admin/products/master/:id/publish — Publish product
+  app.post('/products/master/:id/publish', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const product = await prisma.productMaster.update({
+      where: { id },
+      data: {
+        isPublished: true,
+        publishedAt: new Date(),
+      },
+    });
+
+    return product;
+  });
+
+  // ---- PRODUCT DEDUPLICATION (ADMIN) ----
+
+  // GET /api/admin/products/deduplication — List deduplication tasks
+  app.get('/products/deduplication', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { status, page = 1, limit = 50 } = request.query as any;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      ...(status && { status }),
+    };
+
+    const [dedups, total] = await Promise.all([
+      prisma.productDeduplication.findMany({
+        where,
+        skip,
+        take: limit,
+        include: { product1: true, product2: true },
+        orderBy: { similarity: 'desc' },
+      }),
+      prisma.productDeduplication.count({ where }),
+    ]);
+
+    return {
+      data: dedups,
+      meta: { total, page, limit, hasMore: page * limit < total },
+    };
+  });
+
+  // GET /api/admin/products/deduplication/:id — Get dedup task details
+  app.get('/products/deduplication/:id', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const dedup = await prisma.productDeduplication.findUnique({
+      where: { id },
+      include: { product1: true, product2: true },
+    });
+    if (!dedup) return (request as any).server.httpErrors.notFound('Deduplication task not found');
+    return dedup;
+  });
+
+  // POST /api/admin/products/deduplication/:id/resolve — Resolve deduplication
+  app.post('/products/deduplication/:id/resolve', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { resolvedAs, notes } = request.body as any;
+    const user = (request as any).aritthUser;
+
+    const dedup = await prisma.productDeduplication.update({
+      where: { id },
+      data: {
+        status: 'RESOLVED',
+        resolvedAs,
+        resolutionNotes: notes,
+        reviewedBy: user?.id,
+        reviewedAt: new Date(),
+      },
+      include: { product1: true, product2: true },
+    });
+
+    return dedup;
+  });
+
+  // ---- PRICING MODELS (ADMIN) ----
+
+  // GET /api/admin/pricing/models — List pricing models
+  app.get('/pricing/models', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { page = 1, limit = 50 } = request.query as any;
+    const skip = (page - 1) * limit;
+
+    const [models, total] = await Promise.all([
+      prisma.pricingModel.findMany({
+        skip,
+        take: limit,
+        include: { productMaster: true, supplier: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.pricingModel.count(),
+    ]);
+
+    return {
+      data: models,
+      meta: { total, page, limit, hasMore: page * limit < total },
+    };
+  });
+
+  // GET /api/admin/pricing/models/:id — Get pricing model details
+  app.get('/pricing/models/:id', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const model = await prisma.pricingModel.findUnique({
+      where: { id },
+      include: { productMaster: true, supplier: true },
+    });
+    if (!model) return (request as any).server.httpErrors.notFound('Pricing model not found');
+    return model;
+  });
+
+  // POST /api/admin/pricing/models — Create pricing model
+  app.post('/pricing/models', {
+    preHandler: [requireAritth],
+  }, async (request, reply) => {
+    const { productId, supplierId, baseCost, marginStrategy, marginValue, moq } = request.body as any;
+
+    // Calculate selling price
+    const baseCostNum = Number(baseCost);
+    const marginValueNum = Number(marginValue);
+    let sellingPrice = baseCostNum;
+    if (marginStrategy === 'PERCENTAGE') {
+      sellingPrice = baseCostNum * (1 + marginValueNum / 100);
+    } else {
+      sellingPrice = baseCostNum + marginValueNum;
+    }
+
+    const model = await prisma.pricingModel.create({
+      data: {
+        productId,
+        supplierId,
+        baseCost: baseCostNum,
+        marginStrategy,
+        marginValue: marginValueNum,
+        sellingPrice,
+        moq: moq || 1,
+      },
+      include: { productMaster: true, supplier: true },
+    });
+
+    reply.status(201);
+    return model;
+  });
+
+  // PUT /api/admin/pricing/models/:id — Update pricing model
+  app.put('/pricing/models/:id', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { baseCost, marginStrategy, marginValue, moq } = request.body as any;
+
+    const baseCostNum = baseCost ? Number(baseCost) : undefined;
+    const marginValueNum = marginValue ? Number(marginValue) : undefined;
+
+    let sellingPrice: number | undefined;
+    if (baseCostNum !== undefined && marginValueNum !== undefined) {
+      if (marginStrategy === 'PERCENTAGE') {
+        sellingPrice = baseCostNum * (1 + marginValueNum / 100);
+      } else {
+        sellingPrice = baseCostNum + marginValueNum;
+      }
+    }
+
+    const model = await prisma.pricingModel.update({
+      where: { id },
+      data: {
+        ...(baseCostNum !== undefined && { baseCost: baseCostNum }),
+        ...(marginStrategy && { marginStrategy }),
+        ...(marginValueNum !== undefined && { marginValue: marginValueNum }),
+        ...(sellingPrice !== undefined && { sellingPrice }),
+        ...(moq !== undefined && { moq }),
+      },
+      include: { productMaster: true, supplier: true },
+    });
+
+    return model;
+  });
+
+  // ---- LANDED COSTS (ADMIN) ----
+
+  // GET /api/admin/pricing/landed-costs — List landed costs
+  app.get('/pricing/landed-costs', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { page = 1, limit = 50 } = request.query as any;
+    const skip = (page - 1) * limit;
+
+    const [costs, total] = await Promise.all([
+      prisma.landedCost.findMany({
+        skip,
+        take: limit,
+        include: { productMaster: true, supplier: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.landedCost.count(),
+    ]);
+
+    return {
+      data: costs,
+      meta: { total, page, limit, hasMore: page * limit < total },
+    };
+  });
+
+  // GET /api/admin/pricing/landed-costs/:id — Get landed cost details
+  app.get('/pricing/landed-costs/:id', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const cost = await prisma.landedCost.findUnique({
+      where: { id },
+      include: { productMaster: true, supplier: true },
+    });
+    if (!cost) return (request as any).server.httpErrors.notFound('Landed cost not found');
+    return cost;
+  });
+
+  // POST /api/admin/pricing/landed-costs/calculate — Calculate landed cost
+  app.post('/pricing/landed-costs/calculate', {
+    preHandler: [requireAritth],
+  }, async (request, reply) => {
+    const {
+      productId,
+      supplierId,
+      baseCost,
+      freightCost,
+      customsDuty,
+      importTax,
+      sourceCountry,
+      destinationCountry,
+      margin,
+    } = request.body as any;
+
+    const baseCostNum = Number(baseCost);
+    const freightNum = Number(freightCost || 0);
+    const dutyNum = Number(customsDuty || 0);
+    const taxNum = Number(importTax || 0);
+
+    const landedCost = baseCostNum + freightNum + dutyNum + taxNum;
+    const marginNum = Number(margin || 0);
+    const sellingPrice = landedCost * (1 + marginNum / 100);
+
+    const cost = await prisma.landedCost.create({
+      data: {
+        productId,
+        supplierId,
+        baseCost: baseCostNum,
+        freightCost: freightNum,
+        customsDuty: dutyNum,
+        importTax: taxNum,
+        landedCost,
+        sellingPrice,
+        margin: marginNum,
+        sourceCountry,
+        destinationCountry,
+      },
+      include: { productMaster: true, supplier: true },
+    });
+
+    reply.status(201);
+    return cost;
+  });
+
+  // ---- SUPPLIERS ADMIN CRUD ----
+
+  // POST /api/admin/suppliers — Create a new supplier
+  app.post('/suppliers', {
+    preHandler: [requireAritth],
+  }, async (request, reply) => {
+    const {
+      internalCode,
+      displayName,
+      name,
+      legalName,
+      type,
+      sourceKind,
+      countryCode,
+      region,
+      currency,
+      websiteUrl,
+      contactEmail,
+      contactPhone,
+      verifiedBadge,
+      isManufacturerOfficial,
+      isHiddenFromClient,
+      notes,
+      isActive,
+      avgLeadTimeDays,
+      avgShippingCost,
+      avgDutiesRate,
+    } = request.body as any;
+
+    const supplier = await prisma.supplier.create({
+      data: {
+        internalCode,
+        displayName,
+        ...(name !== undefined && { name }),
+        ...(legalName !== undefined && { legalName }),
+        ...(type !== undefined && { type }),
+        ...(sourceKind !== undefined && { sourceKind }),
+        ...(countryCode !== undefined && { countryCode }),
+        ...(region !== undefined && { region }),
+        ...(currency !== undefined && { currency }),
+        ...(websiteUrl !== undefined && { websiteUrl }),
+        ...(contactEmail !== undefined && { contactEmail }),
+        ...(contactPhone !== undefined && { contactPhone }),
+        ...(verifiedBadge !== undefined && { verifiedBadge }),
+        ...(isManufacturerOfficial !== undefined && { isManufacturerOfficial }),
+        ...(isHiddenFromClient !== undefined && { isHiddenFromClient }),
+        ...(notes !== undefined && { notes }),
+        ...(isActive !== undefined && { isActive }),
+        ...(avgLeadTimeDays !== undefined && { avgLeadTimeDays }),
+        ...(avgShippingCost !== undefined && { avgShippingCost }),
+        ...(avgDutiesRate !== undefined && { avgDutiesRate }),
+      },
+    });
+
+    reply.status(201);
+    return supplier;
+  });
+
+  // PUT /api/admin/suppliers/:id — Update a supplier
+  app.put('/suppliers/:id', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const {
+      displayName,
+      name,
+      legalName,
+      type,
+      sourceKind,
+      countryCode,
+      region,
+      currency,
+      websiteUrl,
+      contactEmail,
+      contactPhone,
+      verifiedBadge,
+      isManufacturerOfficial,
+      isHiddenFromClient,
+      notes,
+      isActive,
+      avgLeadTimeDays,
+      avgShippingCost,
+      avgDutiesRate,
+    } = request.body as any;
+
+    const supplier = await prisma.supplier.update({
+      where: { id },
+      data: {
+        ...(displayName !== undefined && { displayName }),
+        ...(name !== undefined && { name }),
+        ...(legalName !== undefined && { legalName }),
+        ...(type !== undefined && { type }),
+        ...(sourceKind !== undefined && { sourceKind }),
+        ...(countryCode !== undefined && { countryCode }),
+        ...(region !== undefined && { region }),
+        ...(currency !== undefined && { currency }),
+        ...(websiteUrl !== undefined && { websiteUrl }),
+        ...(contactEmail !== undefined && { contactEmail }),
+        ...(contactPhone !== undefined && { contactPhone }),
+        ...(verifiedBadge !== undefined && { verifiedBadge }),
+        ...(isManufacturerOfficial !== undefined && { isManufacturerOfficial }),
+        ...(isHiddenFromClient !== undefined && { isHiddenFromClient }),
+        ...(notes !== undefined && { notes }),
+        ...(isActive !== undefined && { isActive }),
+        ...(avgLeadTimeDays !== undefined && { avgLeadTimeDays }),
+        ...(avgShippingCost !== undefined && { avgShippingCost }),
+        ...(avgDutiesRate !== undefined && { avgDutiesRate }),
+      },
+      include: { verifications: true },
+    });
+
+    return supplier;
+  });
+
+  // POST /api/admin/products/deduplication/:id/review — Admin review of dedup task
+  app.post('/products/deduplication/:id/review', {
+    preHandler: [requireAritth],
+  }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { action, masterProductId, notes } = request.body as any;
+    const user = (request as any).aritthUser;
+
+    // action: 'MERGE' | 'KEEP_BOTH' | 'REJECT'
+    const dedup = await prisma.productDeduplication.update({
+      where: { id },
+      data: {
+        status: 'REVIEWED',
+        resolvedAs: action,
+        resolutionNotes: notes,
+        reviewedBy: user?.id,
+        reviewedAt: new Date(),
+        ...(masterProductId && { masterProductId }),
+      },
+      include: { product1: true, product2: true },
+    });
+
+    return dedup;
+  });
 }

@@ -37,7 +37,7 @@ export function CatalogContent({ token, initialParams }: CatalogContentProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState(initialParams['search'] ?? '');
+  const [search, setSearch] = useState(initialParams['q'] ?? initialParams['search'] ?? '');
   const [category, setCategory] = useState(initialParams['category'] ?? '');
   const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
   const [sortBy, setSortBy] = useState('name');
@@ -367,6 +367,6 @@ function ProductCard({
           )}
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

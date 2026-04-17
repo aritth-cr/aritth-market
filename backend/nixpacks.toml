@@ -9,4 +9,5 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "npm ru
+  "npm run build"
+]

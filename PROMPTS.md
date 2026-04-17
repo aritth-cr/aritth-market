@@ -41,4 +41,4 @@ Escribe TypeScript completo. Production-ready, sin TODOs.
 
 ---
 
-*Agregar más pro
+*Agregar más prompts a medida que se prueben y funcionen.*

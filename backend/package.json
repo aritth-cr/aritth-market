@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Aritth Market (AMT) - B2B Industrial Procurement Platform - Backend API",
   "type": "module",
+  "prisma": {
+    "schema": "src/shared/prisma/schema.prisma"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",

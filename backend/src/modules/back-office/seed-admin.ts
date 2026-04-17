@@ -86,4 +86,3 @@ async function seedAdmin(): Promise<void> {
 }
 
 seedAdmin();
- 

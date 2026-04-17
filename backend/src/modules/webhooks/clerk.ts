@@ -99,9 +99,10 @@ async function handleUserCreated(event: ClerkWebhookEvent): Promise<void> {
   // Try to find company with matching email domain
   const company = await prisma.company.findFirst({
     where: {
-      email: {
-        endsWith: `@${emailDomain}`,
-      },
+      OR: [
+        { invoiceEmail: { endsWith: `@${emailDomain}` } },
+        { quoteEmail: { endsWith: `@${emailDomain}` } },
+      ],
     },
   });
 

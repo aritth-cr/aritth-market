@@ -173,14 +173,14 @@ export function AdminFinance({ token }: { token: string }) {
                         </td>
                       </tr>
                       ))
-                    )}
+                    }
                   </tbody>
                 </table>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+          </>
+        )}
+      </main>
     </div>
   );
 }

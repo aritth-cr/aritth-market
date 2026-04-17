@@ -10,7 +10,7 @@ export default async function QuotesPage() {
   const token = await getToken();
   if (!token) redirect('/sign-in');
   return (
-    <ClientLayout>
+    <ClientLayout token={token}>
       <QuotesContent token={token} />
     </ClientLayout>
   );

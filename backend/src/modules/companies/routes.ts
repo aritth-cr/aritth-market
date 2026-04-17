@@ -174,7 +174,16 @@ export async function companyRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const address = await prisma.address.create({
-      data: { ...body, companyId: user.companyId },
+      data: {
+        label: body.label,
+        address: body.address,
+        canton: body.canton,
+        province: body.province,
+        contactName: body.contactName ?? null,
+        contactPhone: body.contactPhone ?? null,
+        isDefault: body.isDefault,
+        companyId: user.companyId as string,
+      },
     });
 
     return reply.status(201).send(address);

@@ -10,7 +10,7 @@ export default async function CartPage() {
   const token = await getToken();
   if (!token) redirect('/sign-in');
   return (
-    <ClientLayout>
+    <ClientLayout token={token}>
       <CartContent token={token} />
     </ClientLayout>
   );

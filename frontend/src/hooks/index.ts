@@ -385,5 +385,5 @@ export function useProductSearch(initialQuery = ''): UseProductSearchReturn {
     }
   }, []);
 
-  return { results, loading, error, search };
+  return { query, setQuery, debouncedQuery, results, loading, error, search };
 }

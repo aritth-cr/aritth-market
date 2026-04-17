@@ -10,7 +10,7 @@ export default async function OrdersPage() {
   const token = await getToken();
   if (!token) redirect('/sign-in');
   return (
-    <ClientLayout>
+    <ClientLayout token={token}>
       <OrdersContent token={token} />
     </ClientLayout>
   );

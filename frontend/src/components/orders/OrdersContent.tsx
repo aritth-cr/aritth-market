@@ -116,22 +116,20 @@ export function OrdersContent({ token }: { token: string }) {
                           </tr>
                         ))}
                       </tbody>
-                    </table>
-                                  
                       <tfoot>
                         <tr className="border-t border-[#444]">
                           <td colSpan={2} className="py-2 text-right text-gray-400 font-medium">Total</td>
                           <td className="py-2 text-right font-bold" style={{ color: '#5F6C4E' }}>
-                            {formatCRC(order.totalCRC)}
+                            {formatCRC(order.total)}
                           </td>
                         </tr>
                       </tfoot>
                     </table>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

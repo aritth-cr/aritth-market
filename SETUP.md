@@ -136,4 +136,6 @@ Una vez que todo funcione:
 2. Lee la documentación del [Backend](./backend/README.md)
 3. Lee la documentación del [Frontend](./frontend/README.md)
 
-## Do
+## Documentación Completa
+
+Para configuración avanzada, producción y troubleshooting detallado, ver [CONFIGURATION.md](./CONFIGURATION.md).

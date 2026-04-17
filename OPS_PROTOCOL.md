@@ -43,4 +43,5 @@
 - TASK_QUEUE.md → siguiente tarea automática
 - DECISIONS.md → decisiones de negocio y técnicas
 - REVIEW_NOTES.md → hallazgos de IAs
-- PROMPTS.md → prompts 
+- PROMPTS.md → prompts efectivos
+- OPS_PROTOCOL.md → este archivo

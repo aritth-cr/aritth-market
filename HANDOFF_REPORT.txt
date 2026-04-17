@@ -1,0 +1,134 @@
+HANDOFF REPORT — ARITTH MARKET TRANSFORMATION
+Fecha: 2026-04-11
+Fase completada: FASE 1 - Auditoría
+Avance total estimado: 20%
+
+=== WORKFLOW ===
+Claude: orquesta, lee archivos, ejecuta bash, valida, reporta
+ChatGPT: genera archivos completos listos para pegar
+Gemini: valida hardcodes y huecos funcionales
+
+=== INVENTARIO REAL BACKEND ===
+CONSERVAR:
+- src/app.ts (refactor mínimo: quitar getOffersForHomepage hardcoded)
+- src/config/env.ts
+- src/plugins/auth.ts
+- src/modules/webhooks/clerk.ts
+- src/modules/companies/routes.ts
+- src/modules/quotes/routes.ts + pdf.ts (refactor: quitar hardcodes CR)
+- src/modules/orders/routes.ts
+- src/modules/invoices/routes.ts + cron.ts
+- src/modules/exchange-rates/service.ts (extender multi-moneda)
+- src/shared/utils/mailer.ts (quitar hardcodes CR)
+- src/shared/utils/storage.ts (extender para docs técnicos)
+- src/shared/errors/AppError.ts
+- src/shared/prisma/client.ts
+- src/modules/back-office/routes.ts + seed-admin.ts
+
+REFACTORIZAR:
+- src/modules/scraping/engine.ts → multi-source indexer genérico
+- src/modules/scraping/cli.ts → soporte N scrapers
+- src/modules/scraping/offers.ts → offers genérico (no EPA/Novex específico)
+- src/modules/scraping/seed.ts → seed dinámico
+- src/modules/pricing/calculator.ts → landed cost calculator
+
+RECONSTRUIR COMPLETO:
+- src/modules/search/service.ts → búsqueda semántica 9 idiomas
+- src/shared/prisma/schema.prisma → 10 entidades nuevas
+
+ELIMINAR:
+- src/modules/scraping/parsers/epa.ts (mover lógica a parser genérico)
+- src/modules/scraping/parsers/novex.ts (mover lógica a parser genérico)
+
+CREAR (NUEVOS):
+- src/modules/suppliers/ (CRUD, onboarding, verificación, badge)
+- src/modules/offers/ (precio por supplier, stock, lead time, MOQ)
+- src/modules/documents/ (upload, storage, categorización)
+- src/modules/promotions/ (reglas, vigencia, volumen)
+- src/modules/alerts/ (suscripción, triggers)
+- src/modules/partner-api/ (API pública B2B)
+- src/modules/supplier-api/ (API para proveedores)
+
+=== INVENTARIO REAL FRONTEND ===
+CONSERVAR:
+- src/middleware.ts
+- src/lib/api.ts (extender)
+- src/hooks/index.ts
+- src/styles/globals.css
+- src/app/layout.tsx
+- src/components/layout/AdminLayout.tsx + ClientLayout.tsx
+- src/components/cart/CartContent.tsx (mínimo refactor)
+- src/components/orders/OrdersContent.tsx
+- src/components/quotes/QuotesContent.tsx
+- src/components/admin/AdminCompanies.tsx
+- src/components/admin/AdminDashboard.tsx
+- src/components/admin/AdminFinance.tsx
+- src/components/admin/AdminInvoices.tsx
+
+REFACTORIZAR:
+- src/components/admin/AdminScraping.tsx → AdminSources (multi-source)
+- src/app/(admin)/layout.tsx → agregar 7 módulos nuevos
+
+RECONSTRUIR:
+- src/components/catalog/CatalogContent.tsx → multi-offer, agrupado por producto
+- src/types/index.ts → expandir con 10 entidades nuevas
+- src/app/page.tsx → homepage multi-source
+
+CREAR (NUEVOS):
+- src/components/admin/AdminSuppliers.tsx
+- src/components/admin/AdminProducts.tsx (master catalog)
+- src/components/admin/AdminPricing.tsx (landed cost config)
+- src/components/admin/AdminDocuments.tsx
+- src/components/admin/AdminPromotions.tsx
+- src/components/admin/AdminAnalytics.tsx
+- src/components/admin/AdminAPIKeys.tsx
+- src/components/catalog/ProductOffers.tsx (comparador ofertas)
+- src/components/catalog/TechnicalDocs.tsx
+- src/app/(client)/ (rutas cliente completas)
+
+=== HARDCODES A ELIMINAR ===
+1. epa.ts: BASE_URL='https://www.epa.cr' + scraper completo
+2. novex.ts: BASE_URL='https://www.novex.cr' + scraper completo
+3. engine.ts: switch case 'epa'|'novex' hardcoded
+4. cli.ts: 'Uso: epa|novex' hardcoded
+5. seed.ts: EPA + Novex como únicos SourceStore
+6. offers.ts: función getOffersForHomepage específica EPA/Novex
+7. mailer.ts: 'Zona Franca | San José, Costa Rica'
+8. quotes/pdf.ts: 'ventas@aritth.com | aritth.com | Zona Franca, San José, Costa Rica'
+9. pricing/calculator.ts: comentarios 'EPA, Novex, etc.'
+10. exchange-rates/service.ts: función convertFromCRC (asumir CRC como base)
+
+=== HUECOS FUNCIONALES DETECTADOS ===
+INEXISTENTE en código actual (0% implementado):
+- Supplier (modelo + CRUD)
+- SupplierOffer (precio/stock/lead time por supplier)
+- PricingRule / Landed Cost (flete+arancel+seguro+IVA configurable)
+- TechnicalDocument (datasheets, CAD, SDS, certificates)
+- Promotion (descuentos por volumen/tiempo)
+- PriceAlert (evolucion de StockAlert)
+- PartnerAPIKey / SupplierAPIKey
+- Búsqueda semántica 9 idiomas (pgvector existe pero sin implementar)
+- Resultados agrupados por producto (no por tienda)
+- Badge fabricante verificado
+- Descarga CAD/datasheet
+- Selector idioma
+- Comparador ofertas
+- Procurement center / sourcing workflow
+
+=== COMPATIBILIDADES QUE SOBREVIVEN ===
+- Auth Clerk (completo)
+- Webhook Clerk
+- pgvector configurado en datasource
+- Company/User/AritthUser models (base sólida)
+- Quote/QuoteItem/Order/Invoice models (con refactor mínimo)
+- ExchangeRate model (extender)
+- StockAlert → evolucionar a PriceAlert
+- AuditLog (reutilizar)
+- Cart/CartItem (reutilizar)
+- RecurringOrder (reutilizar)
+- mailer.ts (quitar hardcodes)
+- storage.ts (extender)
+
+=== SIGUIENTE FASE ===
+FASE 2: ChatGPT genera schema.prisma completo (10 entidades) + migrations + seed
+Claude ejecuta: npx prisma migrate dev + valida

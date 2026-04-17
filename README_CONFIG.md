@@ -75,4 +75,5 @@ Ver la sección de **Troubleshooting** en:
 Usa los archivos `.env.production.example` como guía.
 
 ---
-
+
+**No hay secretos reales en estos archivos.** Todos usan valores de ejemplo.

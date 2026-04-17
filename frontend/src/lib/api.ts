@@ -231,3 +231,117 @@ export const invoicesApi = {
   adminAddNote: (id: string, content: string, token: string) =>
     apiFetch(`/api/invoices/${id}/notes`, { method: 'POST', body: JSON.stringify({ content }), token }),
 };
+
+// ---- FASE 5: SUPPLIERS ----
+export const suppliersApi = {
+  list: (params: Record<string, string>, token: string) =>
+    apiFetch(`/api/admin/suppliers?${new URLSearchParams(params)}`, { token }),
+
+  get: (id: string, token: string) =>
+    apiFetch(`/api/admin/suppliers/${id}`, { token }),
+
+  create: (data: Record<string, unknown>, token: string) =>
+    apiFetch('/api/admin/suppliers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  update: (id: string, data: Record<string, unknown>, token: string) =>
+    apiFetch(`/api/admin/suppliers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  verify: (id: string, data: { type: string; evidence?: string; notes?: string }, token: string) =>
+    apiFetch(`/api/admin/suppliers/${id}/verify`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  approve: (id: string, token: string) =>
+    apiFetch(`/api/admin/suppliers/${id}/approve`, { method: 'POST', token }),
+};
+
+// ---- FASE 5: PRODUCTS MASTER ----
+export const productsMasterApi = {
+  list: (params: Record<string, string>, token: string) =>
+    apiFetch(`/api/admin/products/master?${new URLSearchParams(params)}`, { token }),
+
+  get: (id: string, token: string) =>
+    apiFetch(`/api/admin/products/master/${id}`, { token }),
+
+  create: (data: Record<string, unknown>, token: string) =>
+    apiFetch('/api/admin/products/master', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  update: (id: string, data: Record<string, unknown>, token: string) =>
+    apiFetch(`/api/admin/products/master/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  publish: (id: string, token: string) =>
+    apiFetch(`/api/admin/products/master/${id}/publish`, { method: 'POST', token }),
+};
+
+// ---- FASE 5: DEDUPLICATION ----
+export const deduplicationApi = {
+  list: (params: Record<string, string>, token: string) =>
+    apiFetch(`/api/admin/products/deduplication?${new URLSearchParams(params)}`, { token }),
+
+  get: (id: string, token: string) =>
+    apiFetch(`/api/admin/products/deduplication/${id}`, { token }),
+
+  resolve: (id: string, data: { resolvedAs: string; notes?: string }, token: string) =>
+    apiFetch(`/api/admin/products/deduplication/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  requestManualReview: (id: string, token: string) =>
+    apiFetch(`/api/admin/products/deduplication/${id}/review`, { method: 'POST', token }),
+};
+
+// ---- FASE 5: PRICING ----
+export const pricingApi = {
+  listModels: (params: Record<string, string>, token: string) =>
+    apiFetch(`/api/admin/pricing/models?${new URLSearchParams(params)}`, { token }),
+
+  getModel: (id: string, token: string) =>
+    apiFetch(`/api/admin/pricing/models/${id}`, { token }),
+
+  createModel: (data: Record<string, unknown>, token: string) =>
+    apiFetch('/api/admin/pricing/models', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  updateModel: (id: string, data: Record<string, unknown>, token: string) =>
+    apiFetch(`/api/admin/pricing/models/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  listLandedCosts: (params: Record<string, string>, token: string) =>
+    apiFetch(`/api/admin/pricing/landed-costs?${new URLSearchParams(params)}`, { token }),
+
+  getLandedCost: (id: string, token: string) =>
+    apiFetch(`/api/admin/pricing/landed-costs/${id}`, { token }),
+
+  calculateLandedCost: (data: Record<string, unknown>, token: string) =>
+    apiFetch('/api/admin/pricing/landed-costs/calculate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      token,
+    }),
+};

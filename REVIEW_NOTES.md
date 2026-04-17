@@ -14,4 +14,4 @@
 
 ---
 
-*Vacío — pendiente primeras revisio
+*Vacío — pendiente primeras revisiones del equipo*

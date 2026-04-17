@@ -274,3 +274,119 @@ export interface DashboardStats {
   pendingInvoices: number;
   overdueInvoices: number;
 }
+
+// ============================================================================
+// FASE 5: SUPPLIERS, PRODUCTS MASTER, PRICING
+// ============================================================================
+
+export type SupplierStatus = 'PENDING' | 'VERIFIED' | 'APPROVED' | 'SUSPENDED' | 'REJECTED';
+export type VerificationType = 'DOCUMENT' | 'REFERENCE' | 'INSPECTION' | 'CERTIFICATIONS';
+export type DeduplicationStatus = 'PENDING' | 'PROCESSING' | 'RESOLVED' | 'MANUAL_REVIEW';
+export type MarginStrategy = 'PERCENTAGE' | 'FIXED_AMOUNT' | 'COST_PLUS' | 'COMPETITIVE';
+
+export interface Supplier {
+  id: string;
+  name: string;
+  legalName: string;
+  email: string;
+  phone: string;
+  country: string;
+  province?: string;
+  city?: string;
+  address?: string;
+  type: string; // 'Manufacturer' | 'Distributor' | 'Wholesale'
+  internalCode?: string;
+  verifiedBadge: boolean;
+  isManufacturerOfficial: boolean;
+  isNational: boolean;
+  status: SupplierStatus;
+  certificationsUrl?: string;
+  businessRegistration?: string;
+  taxId?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  verifications?: SupplierVerification[];
+}
+
+export interface SupplierVerification {
+  id: string;
+  supplierId: string;
+  type: VerificationType;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  verifiedBy?: string;
+  verifiedAt?: string;
+  notes?: string;
+  evidence?: string; // URL to file
+  createdAt: string;
+}
+
+export interface ProductMaster {
+  id: string;
+  canonicalName: string;
+  normalizedName: string;
+  manufacturerName?: string;
+  manufacturerPartNumber?: string;
+  sku: string;
+  description?: string;
+  category?: string;
+  isPublished: boolean;
+  imageUrls: string[];
+  deduplicationId?: string; // link to dedup task
+  createdAt: string;
+  updatedAt: string;
+  linkedProducts?: string[]; // Product IDs
+}
+
+export interface ProductDeduplication {
+  id: string;
+  productId1: string;
+  productId2: string;
+  similarity: number; // 0-100 percentage
+  status: DeduplicationStatus;
+  resolvedAs?: string; // Which product is canonical
+  resolvedBy?: string;
+  resolvedAt?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface PricingModel {
+  id: string;
+  productId: string;
+  supplierId: string;
+  baseCost: number; // Material cost
+  marginStrategy: MarginStrategy;
+  marginValue: number; // Percentage or fixed amount
+  sellingPrice: number;
+  currency: Currency;
+  minMargin: number; // Minimum margin %
+  moq: number; // Minimum order quantity
+  isActive: boolean;
+  validFrom: string;
+  validUntil?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LandedCost {
+  id: string;
+  productId: string;
+  supplierId: string;
+  baseCost: number;
+  unitPrice: number;
+  landedCost: number; // baseCost + freight + insurance + duties + taxes
+  freightCost: number;
+  insuranceCost: number;
+  customsDuty: number;
+  importTax: number;
+  currency: Currency;
+  sourceCountry: string;
+  destinationCountry: string;
+  estimatedDays: number;
+  margin: number; // %
+  sellingPrice: number;
+  createdAt: string;
+  updatedAt: string;
+}

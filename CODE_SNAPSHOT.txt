@@ -1,0 +1,39 @@
+CODE SNAPSHOT — FASE 1 AUDITORÍA
+Fecha: 2026-04-11
+
+=== BACKEND SRC (28 archivos) ===
+app.ts | config/env.ts | plugins/auth.ts | server.ts
+modules/back-office/routes.ts + seed-admin.ts
+modules/companies/routes.ts
+modules/exchange-rates/service.ts
+modules/invoices/cron.ts + routes.ts
+modules/orders/routes.ts
+modules/pricing/calculator.ts
+modules/products/routes.ts
+modules/quotes/pdf.ts + routes.ts
+modules/scraping/cli.ts + engine.ts + offers.ts + parsers/epa.ts + parsers/novex.ts + seed.ts
+modules/search/service.ts
+modules/webhooks/clerk.ts
+shared/errors/AppError.ts
+shared/prisma/client.ts + schema.prisma
+shared/utils/mailer.ts + storage.ts
+
+=== FRONTEND SRC (24 archivos) ===
+app/(admin)/layout.tsx | app/layout.tsx | app/page.tsx
+components/admin: AdminCompanies, AdminDashboard, AdminFinance, AdminInvoices, AdminScraping
+components/cart/CartContent.tsx
+components/catalog/CatalogContent.tsx
+components/layout/AdminLayout.tsx + ClientLayout.tsx
+components/orders/OrdersContent.tsx
+components/quotes/QuotesContent.tsx
+hooks/index.ts | lib/api.ts | middleware.ts | styles/globals.css | types/index.ts
+
+=== SCHEMA ACTUAL (16 modelos) ===
+Company | Address | User | AritthUser | SourceStore | Product | Cart | CartItem
+Quote | QuoteItem | Order | Invoice | ExchangeRate | CreditHistory
+StockAlert | RecurringOrder | ApprovalRequest | InternalNote | AuditLog
+
+=== SCHEMA OBJETIVO (10 nuevas entidades) ===
+Supplier | SupplierOffer | PricingRule | SearchIndex
+TechnicalDocument | Promotion | PriceAlert | PartnerAPIKey | SupplierAPIKey
+(+ modificar Product para ser master catalog, manufacturer-first)

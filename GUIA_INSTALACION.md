@@ -192,4 +192,14 @@ aritth-app/
 ```
 Precio tienda (EPA/Novex) = P
 Costo Aritth = P × 1.13      ← Aritth paga 13% IVA
-Con margen   = co
+Con margen   = costo × 1.10  ← 10% ganancia Aritth
+
+Cliente Zona Franca: precio final = con margen
+Cliente regular:     precio final = con margen × 1.13
+```
+
+---
+
+## Contacto
+
+ventas@aritth.com | aritth.com

@@ -22,30 +22,38 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/products - Catálogo con filtros (visible a clientes)
   app.get('/', {
     preHandler: [requireClient],
-  }, async (request) => {
+  }, async (request, reply) => {
     const query = productQuerySchema.parse(request.query);
     const user = (request as any).clientUser;
     const isExempt: boolean = user.company.isExempt;
 
-    // Si hay búsqueda con texto, usar motor inteligente
-    if (query.search && query.search.length > 1) {
-      const results = await searchProducts({
-        query: query.search,
-        limit: query.limit,
-        ...(query.category !== undefined ? { category: query.category } : {}),
-        ...(query.inStock !== undefined ? { inStockOnly: query.inStock } : {}),
-        ...(query.minPrice !== undefined ? { minPrice: query.minPrice } : {}),
-        ...(query.maxPrice !== undefined ? { maxPrice: query.maxPrice } : {}),
-      });
+    // FASE 4: motor de búsqueda agrupado por producto
+    const searchText =
+      typeof (request.query as any).q === 'string'
+        ? String((request.query as any).q).trim()
+        : typeof (request.query as any).search === 'string'
+          ? String((request.query as any).search).trim()
+          : '';
 
-      return {
-        data: results.map(p => ({
-          ...p,
-          pricing: calculateProductPrice(p.storePrice, isExempt),
-          // NOTA: storeId y store origin NO se expone a clientes
-        })),
-        meta: { total: results.length, page: 1, limit: query.limit, hasMore: false },
-      };
+    if (searchText) {
+      const grouped = await searchProducts({
+        query: searchText,
+        languageCode:
+          typeof (request.query as any).lang === 'string'
+            ? String((request.query as any).lang)
+            : 'es',
+        onlyNational:
+          (request.query as any).onlyNational === 'true' ||
+          (request.query as any).onlyNational === true,
+        onlyInternational:
+          (request.query as any).onlyInternational === 'true' ||
+          (request.query as any).onlyInternational === true,
+        pageSize:
+          typeof (request.query as any).limit === 'string'
+            ? Number.parseInt(String((request.query as any).limit), 10)
+            : 20,
+      });
+      return reply.send({ mode: 'grouped-search', ...grouped });
     }
 
     // Filtro de "Disponible Hoy" — basado en horarios de tiendas

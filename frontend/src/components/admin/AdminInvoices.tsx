@@ -141,9 +141,10 @@ export function AdminInvoices({ token }: { token: string }) {
                 </div>
               </div>
             ))
-          )}
-        </div>
-      )}
+            }
+          </div>
+        )}
+      </main>
     </div>
   );
 }

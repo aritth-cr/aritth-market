@@ -11,14 +11,14 @@ export default async function CatalogPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { getToken } = await auth();
-  const token = await getToken();
+  const token = (await getToken()) ?? '';
   const params = await searchParams;
 
   return (
-    <ClientLayout>
+    <ClientLayout token={token}>
       <Suspense fallback={<CatalogSkeleton />}>
         <CatalogContent
-          token={token ?? ''}
+          token={token}
           initialParams={params}
         />
       </Suspense>

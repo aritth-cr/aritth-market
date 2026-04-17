@@ -215,4 +215,4 @@ Proyecto listo para:
 Creado: 2026-04-09
 Sin secretos. Sin TODOs. Listo para usar.
 
-════
+════════════════════════════════════════════════════════════════════════════

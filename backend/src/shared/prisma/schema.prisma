@@ -1,19 +1,20 @@
 // Aritth Market (AMT) - Prisma Schema
 // PostgreSQL 16 + pgvector for semantic search
+// FASE 2: Multi-source global procurement platform
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
+  // previewFeatures = ["postgresqlExtensions"]  // TODO: re-enable when pgvector is installed
 }
 
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [pgvector(map: "vector")]
+  // extensions = [pgvector(map: "vector")]  // TODO: re-enable in production
 }
 
 // =============================================
-// ENUMS
+// ENUMS - EXISTING
 // =============================================
 
 enum CompanyType {
@@ -89,6 +90,106 @@ enum AlertType {
 }
 
 // =============================================
+// ENUMS - NEW (FASE 2)
+// =============================================
+
+enum CurrencyCode {
+  CRC
+  USD
+  EUR
+  GBP
+  JPY
+  CNY
+  TWD
+  BRL
+  MXN
+  COP
+  ARS
+  SGD
+  KRW
+}
+
+enum SupplierType {
+  MANUFACTURER
+  DISTRIBUTOR
+  IMPORTER
+  RETAILER
+  MARKETPLACE
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum DocumentVisibility {
+  PUBLIC
+  PARTNER
+  PRIVATE
+}
+
+enum OperationalAlertType {
+  SCRAPING_FAILURE
+  PRICE_ANOMALY
+  STOCK_CRITICAL
+  PAYMENT_OVERDUE
+  SYSTEM_ERROR
+  SUPPLIER_OFFLINE
+  RATE_LIMIT_HIT
+}
+
+enum ProcurementState {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum TechnicalDocumentType {
+  DATASHEET
+  MANUAL
+  CERTIFICATE
+  SAFETY_SHEET
+  CATALOG
+  WARRANTY
+  OTHER
+}
+
+// =============================================
+// FASE 5: ENUMS PARA ADMIN PANEL
+// =============================================
+
+enum MarginStrategy {
+  PERCENTAGE    // Margen como porcentaje (ej: 0.30 = 30%)
+  FIXED_AMOUNT  // Margen como monto fijo
+}
+
+enum DeduplicationStatus {
+  PENDING      // Esperando revisión manual
+  PROCESSING   // En proceso de análisis automático
+  RESOLVED     // Resuelto (merged o rejected)
+}
+
+enum SupplierVerificationType {
+  DOCUMENTS        // Verificación documental
+  SITE_INSPECTION  // Inspección de sitio
+  REFERENCE_CHECK  // Verificación de referencias
+  QUALITY_TEST     // Prueba de calidad
+}
+
+enum SupplierVerificationStatus {
+  PENDING    // Esperando verificación
+  SUBMITTED  // Documentos presentados
+  VERIFIED   // Verificado exitosamente
+  REJECTED   // Rechazado
+}
+
+// =============================================
 // EMPRESAS CLIENTES
 // =============================================
 
@@ -131,7 +232,7 @@ model Company {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  // Relaciones
+  // Relaciones existentes
   users               User[]
   addresses           Address[]
   quotes              Quote[]
@@ -140,6 +241,10 @@ model Company {
   creditHistory       CreditHistory[]
   recurringOrders     RecurringOrder[]
   approvalRequests    ApprovalRequest[]
+
+  // Relaciones nuevas
+  partnerApiKey       PartnerAPIKey?
+  procurementRequests ProcurementRequest[]
 
   @@index([status])
   @@index([cedula])
@@ -259,20 +364,36 @@ model Product {
   inStock         Boolean     @default(true)
   imageUrl        String?
 
-  // Embedding para búsqueda semántica
-  embedding       Unsupported("vector(768)")?
-
   // Metadata
   isActive        Boolean     @default(true)
   lastSeenAt      DateTime    @default(now())
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  // Relaciones existentes
   store           SourceStore @relation(fields: [storeId], references: [id])
   priceHistory    PriceHistory[]
   quoteItems      QuoteItem[]
   cartItems       CartItem[]
   stockAlerts     StockAlert[]
+
+  // Relaciones nuevas
+  supplierOffers  SupplierOffer[]
+  technicalDocs   TechnicalDocument[]
+  searchIndex     SearchIndex?         // FASE 4+: HYBRID search (1-to-1)
+  embedding       ProductEmbedding?    // FASE 4+: Vector embeddings (multilingüe)
+  priceAlerts     PriceAlert[]
+  synonyms        ProductSynonym[]     // FASE 4+: Sinónimos y aliases (exact match)
+
+  // FASE 4: Global catalog fields
+  canonicalName          String?
+  normalizedName         String?
+  manufacturerName       String?
+  manufacturerPartNumber String?
+  isPublished            Boolean  @default(false)
+  imageUrls              String[]
+
+  localizedSearchTerms   LocalizedSearchTerm[]
 
   @@unique([storeId, externalId])
   @@index([category])
@@ -595,3 +716,584 @@ model InternalNote {
   id        String   @id @default(cuid())
   invoiceId String
   authorId  String   // AritthUser ID
+  content   String
+  createdAt DateTime @default(now())
+
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+}
+
+// =============================================
+// AUDIT LOG
+// =============================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String
+  data      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// =============================================
+// FASE 2: IDIOMAS SOPORTADOS
+// =============================================
+
+model SupportedLanguage {
+  id        String   @id @default(cuid())
+  code      String   @unique  // "es", "en", "pt", "fr", "de", "it", "ja", "zh-cn", "zh-tw"
+  name      String
+  locale    String   // "es-CR", "en-US", "pt-BR", etc.
+  isDefault Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  searchTerms LocalizedSearchTerm[]
+
+  @@index([code])
+}
+
+// =============================================
+// FASE 2: PROVEEDORES MULTI-FUENTE
+// =============================================
+
+model Supplier {
+  id                     String       @id @default(cuid())
+  internalCode           String       @unique
+  displayName            String
+  name                   String?      @unique  // legacy transitional field
+  legalName              String?
+  type                   SupplierType @default(DISTRIBUTOR)
+  sourceKind             String       @default("DIRECT_SUPPLIER")
+  countryCode            String       @default("CR")
+  country                String?      // legacy transitional field
+  region                 String?
+  currency               CurrencyCode @default(USD)
+  websiteUrl             String?
+  website                String?      // legacy transitional field
+  contactEmail           String?
+  contactPhone           String?
+  verifiedBadge          Boolean      @default(false)
+  isManufacturerOfficial Boolean      @default(false)
+  isHiddenFromClient     Boolean      @default(true)
+  notes                  String?
+  isActive               Boolean      @default(true)
+
+  // Landed cost config
+  avgLeadTimeDays        Int?
+  avgShippingCost        Decimal?     @db.Decimal(10, 2)
+  avgDutiesRate          Decimal?     @db.Decimal(5, 4)  // 0.05 = 5%
+
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  offers                 SupplierOffer[]
+  apiKeys                SupplierAPIKey[]
+  verifications          SupplierVerification[]
+  pricingModels          PricingModel[]
+  landedCosts            LandedCost[]
+
+  @@index([isActive])
+  @@index([type])
+  @@index([countryCode])
+  @@index([isManufacturerOfficial])
+  @@index([verifiedBadge])
+}
+
+model SupplierOffer {
+  id           String       @id @default(cuid())
+  supplierId   String
+  productId    String?      // Nullable - puede existir sin match de producto
+
+  // Referencia del proveedor
+  supplierSku  String?
+  supplierName String       // Nombre del producto según proveedor
+
+  // Precios
+  costPrice    Decimal      @db.Decimal(12, 2)
+  currency     CurrencyCode @default(USD)
+  minQuantity  Int          @default(1)
+  leadTimeDays Int          @default(0)
+
+  // Landed cost (calculado)
+  landedCostUsd    Decimal? @db.Decimal(12, 2)
+  landedCostLocal  Decimal? @db.Decimal(12, 2)
+
+  inStock      Boolean      @default(true)
+  isActive     Boolean      @default(true)
+
+  // FASE 4: offer-level flags
+  isNational          Boolean  @default(false)
+  isManufacturerOffer Boolean  @default(false)
+  unitPrice           Decimal? @db.Decimal(12, 2)
+  currencyCode        String?
+  stockQty            Int?
+  moq                 Int?
+  lastValidatedAt     DateTime?
+
+  lastCheckedAt DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  supplier     Supplier     @relation(fields: [supplierId], references: [id])
+  product      Product?     @relation(fields: [productId], references: [id])
+  pricingRules PricingRule[]
+
+  @@index([supplierId])
+  @@index([productId])
+  @@index([isActive])
+}
+
+model PricingRule {
+  id          String         @id @default(cuid())
+  offerId     String?
+  companyId   String?        // Regla específica para empresa
+  name        String
+  description String?
+
+  // MARGIN | FIXED_PRICE | DISCOUNT | LANDED_COST_MARGIN
+  ruleType    String         @default("MARGIN")
+  value       Decimal        @db.Decimal(8, 4)  // 0.10 = 10%
+
+  priority    Int            @default(0)
+  isActive    Boolean        @default(true)
+
+  validFrom   DateTime?
+  validUntil  DateTime?
+
+  createdAt   DateTime       @default(now())
+
+  offer       SupplierOffer? @relation(fields: [offerId], references: [id])
+
+  @@index([isActive])
+  @@index([offerId])
+}
+
+// =============================================
+// FASE 2: DOCUMENTOS TÉCNICOS
+// =============================================
+
+model TechnicalDocument {
+  id          String                @id @default(cuid())
+  productId   String?
+  title       String
+  type        TechnicalDocumentType @default(DATASHEET)
+  fileUrl     String
+  fileSize    Int?                  // bytes
+  mimeType    String?
+  language    String?               // "es", "en", etc.
+  visibility  DocumentVisibility    @default(PUBLIC)
+
+  uploadedBy  String?               // AritthUser ID
+  isActive    Boolean               @default(true)
+
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  product     Product?              @relation(fields: [productId], references: [id])
+  versions    DocumentVersion[]
+
+  @@index([productId])
+  @@index([type])
+  @@index([visibility])
+}
+
+model DocumentVersion {
+  id          String            @id @default(cuid())
+  documentId  String
+  version     String            // "1.0", "2.0"
+  fileUrl     String
+  changeNotes String?
+  createdAt   DateTime          @default(now())
+
+  document    TechnicalDocument @relation(fields: [documentId], references: [id])
+
+  @@index([documentId])
+}
+
+// =============================================
+// FASE 2: PROMOCIONES
+// =============================================
+
+model Promotion {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  description    String?
+
+  // PERCENTAGE | FIXED
+  discountType   String   @default("PERCENTAGE")
+  discountValue  Decimal  @db.Decimal(8, 4)
+
+  minOrderAmount Decimal? @db.Decimal(12, 2)
+  maxUses        Int?
+  usedCount      Int      @default(0)
+
+  isActive       Boolean  @default(true)
+  validFrom      DateTime
+  validUntil     DateTime
+
+  createdAt      DateTime @default(now())
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validUntil])
+}
+
+// =============================================
+// FASE 2: ALERTAS DE PRECIO (multi-currency)
+// =============================================
+
+model PriceAlert {
+  id          String       @id @default(cuid())
+  userId      String
+  productId   String
+  targetPrice Decimal      @db.Decimal(12, 2)
+  currency    CurrencyCode @default(USD)
+  isActive    Boolean      @default(true)
+  notifiedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  product     Product      @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([isActive])
+}
+
+// =============================================
+// FASE 2: API KEYS (PARTNER + SUPPLIER)
+// =============================================
+
+model PartnerAPIKey {
+  id         String    @id @default(cuid())
+  companyId  String    @unique
+  key        String    @unique @default(cuid())
+  name       String?
+
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+
+  rateLimit  Int       @default(1000)  // requests/day
+  usageCount Int       @default(0)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  company    Company   @relation(fields: [companyId], references: [id])
+
+  @@index([key])
+}
+
+model SupplierAPIKey {
+  id         String   @id @default(cuid())
+  supplierId String
+  key        String   @unique @default(cuid())
+  name       String?
+
+  isActive   Boolean  @default(true)
+  lastUsedAt DateTime?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+
+  @@index([key])
+  @@index([supplierId])
+}
+
+model SupplierVerification {
+  id           String                          @id @default(cuid())
+  supplierId   String
+  type         SupplierVerificationType
+  status       SupplierVerificationStatus      @default(PENDING)
+  evidence     String?                         // Path to uploaded document or proof
+  notes        String?
+  verifiedBy   String?                         // AritthUser ID
+  verifiedAt   DateTime?
+
+  createdAt    DateTime                        @default(now())
+  updatedAt    DateTime                        @updatedAt
+
+  supplier     Supplier                        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([type])
+  @@unique([supplierId, type])
+}
+
+// =============================================
+// FASE 4+: BÚSQUEDA SEMÁNTICA HÍBRIDA (embeddings + exact match + ranking)
+// =============================================
+
+model SearchIndex {
+  id           String  @id @default(cuid())
+  productId    String  @unique  // CHANGE: Solo 1 SearchIndex por producto (no por idioma)
+
+  // Full-text search fields (para exact match fallback)
+  searchableTitle    String?
+  searchableBody     String?
+  searchableKeywords String[]
+  normalizedTitle    String?  // Para búsqueda exacta
+  lastIndexedAt      DateTime?
+  reindexQueuedAt    DateTime?
+
+  updatedAt DateTime @updatedAt
+
+  product Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  terms   LocalizedSearchTerm[]
+
+  @@index([productId])
+}
+
+// NEW: Embeddings multilingües con pgvector
+// TODO: Uncomment embedding field when pgvector is installed in production
+model ProductEmbedding {
+  id             String   @id @default(cuid())
+  productId      String   @unique
+  // embedding   Unsupported("vector(768)")  // TODO: re-enable with pgvector
+  embeddingModel String   @default("embedding-001")
+  updatedAt      DateTime @updatedAt
+
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// NEW: Sinónimos, términos técnicos y aliases por idioma (para exact match híbrido)
+model ProductSynonym {
+  id             String   @id @default(cuid())
+  productId      String
+  languageCode   String   // 'es', 'en', 'ja', 'pt', 'fr', 'de', 'it', 'zh-CN', 'zh-TW'
+  synonymType    String   @default("SYNONYM")  // SYNONYM | TECHNICAL | COLLOQUIAL | ALIAS | MPN | SKU
+  term           String   // El término o alias
+  normalizedTerm String?  // Lowercase, normalized para búsqueda exacta
+  weight         Float    @default(1.0)  // Para ranking
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, languageCode, term])
+  @@index([productId])
+  @@index([languageCode])
+  @@index([normalizedTerm])
+  @@index([term])
+}
+
+model LocalizedSearchTerm {
+  id             String  @id @default(cuid())
+  productId      String                         // FASE 4: direct product reference
+  searchIndexId  String?                        // legacy FK → SearchIndex (optional)
+  languageCode   String                         // FK → SupportedLanguage.code
+  term           String
+  normalizedTerm String?                        // normalized form for fast lookup
+  termKind       String  @default("CANONICAL")  // CANONICAL | SYNONYM
+  weight         Float   @default(1.0)
+
+  product     Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  searchIndex SearchIndex?       @relation(fields: [searchIndexId], references: [id], onDelete: Cascade)
+  language    SupportedLanguage  @relation(fields: [languageCode], references: [code])
+
+  @@unique([productId, languageCode, term])
+  @@index([languageCode])
+  @@index([term])
+  @@index([normalizedTerm])
+}
+
+// =============================================
+// FASE 2: ALERTAS OPERACIONALES
+// =============================================
+
+model OperationalAlert {
+  id         String               @id @default(cuid())
+  type       OperationalAlertType
+  severity   AlertSeverity        @default(WARNING)
+  title      String
+  message    String
+  entity     String?
+  entityId   String?
+
+  isResolved Boolean              @default(false)
+  resolvedAt DateTime?
+  resolvedBy String?              // AritthUser ID
+
+  createdAt  DateTime             @default(now())
+
+  @@index([type])
+  @@index([isResolved])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+// =============================================
+// FASE 2: PROCUREMENT (SOLICITUDES DE COMPRA)
+// =============================================
+
+model ProcurementRequest {
+  id              String           @id @default(cuid())
+  companyId       String
+  requestedBy     String           // User ID
+
+  title           String
+  description     String?
+  items           Json             // Array de {name, sku, quantity, specs}
+
+  state           ProcurementState @default(DRAFT)
+  priority        String           @default("NORMAL")  // LOW | NORMAL | HIGH | URGENT
+
+  estimatedAmount Decimal?         @db.Decimal(12, 2)
+  currency        CurrencyCode     @default(USD)
+
+  assignedTo      String?          // AritthUser ID
+  notes           String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  statusHistory   ProcurementStatusHistory[]
+
+  @@index([companyId])
+  @@index([state])
+  @@index([assignedTo])
+}
+
+model ProcurementStatusHistory {
+  id              String             @id @default(cuid())
+  procurementId   String
+  previousState   ProcurementState?
+  newState        ProcurementState
+  notes           String?
+  changedBy       String?            // User or AritthUser ID
+
+  createdAt       DateTime           @default(now())
+
+  procurement     ProcurementRequest @relation(fields: [procurementId], references: [id])
+
+  @@index([procurementId])
+}
+
+// =============================================
+// FASE 5: CATÁLOGO MASTER & DEDUPLICACIÓN
+// =============================================
+
+model ProductMaster {
+  id                String                      @id @default(cuid())
+  canonicalName     String
+  normalizedName    String                      // Lowercase, normalized for search
+  manufacturerName  String?
+  sku               String                      @unique
+  category          String?
+  description       String?
+  imageUrls         String[]                    // Array de URLs de imágenes
+  isPublished       Boolean                     @default(false)
+  publishedAt       DateTime?
+
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  deduplications1   ProductDeduplication[]      @relation("product1")
+  deduplications2   ProductDeduplication[]      @relation("product2")
+  pricingModels     PricingModel[]
+  landedCosts       LandedCost[]
+
+  @@index([isPublished])
+  @@index([sku])
+  @@index([normalizedName])
+}
+
+model ProductDeduplication {
+  id                String                      @id @default(cuid())
+  productId1        String
+  productId2        String
+  similarity        Float                       @default(0)  // 0-100 percentage
+  status            DeduplicationStatus         @default(PENDING)
+  resolvedAs        String?                     // product ID that was kept
+  resolutionNotes   String?
+  reviewedBy        String?                     // AritthUser ID
+  reviewedAt        DateTime?
+
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  product1          ProductMaster               @relation("product1", fields: [productId1], references: [id], onDelete: Cascade)
+  product2          ProductMaster               @relation("product2", fields: [productId2], references: [id], onDelete: Cascade)
+
+  @@unique([productId1, productId2])
+  @@index([status])
+  @@index([similarity])
+}
+
+// =============================================
+// FASE 5: MODELOS DE PRECIOS & COSTOS LOGÍSTICOS
+// =============================================
+
+model PricingModel {
+  id                String                      @id @default(cuid())
+  productId         String
+  supplierId        String
+  baseCost          Decimal                     @db.Decimal(12, 2)
+  marginStrategy    MarginStrategy              @default(PERCENTAGE)
+  marginValue       Decimal                     @db.Decimal(10, 4)  // 0.30 = 30% or 25.50 = $25.50
+  sellingPrice      Decimal                     @db.Decimal(12, 2)  // Calculated based on margin
+  moq               Int                         @default(1)         // Minimum Order Quantity
+  isActive          Boolean                     @default(true)
+  notes             String?
+
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  productMaster     ProductMaster               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier          Supplier                    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, supplierId])
+  @@index([isActive])
+  @@index([supplierId])
+}
+
+model LandedCost {
+  id                String                      @id @default(cuid())
+  productId         String
+  supplierId        String
+
+  // Base costs
+  baseCost          Decimal                     @db.Decimal(12, 2)
+  currency          CurrencyCode                @default(USD)
+
+  // Logistics components
+  freightCost       Decimal                     @db.Decimal(12, 2)
+  customsDuty       Decimal                     @db.Decimal(12, 2)
+  importTax         Decimal                     @db.Decimal(12, 2)
+
+  // Calculated totals
+  landedCost        Decimal                     @db.Decimal(12, 2)  // Base + freight + duties + tax
+  sellingPrice      Decimal                     @db.Decimal(12, 2)  // With margin
+  margin            Float                       @default(0)         // Percentage
+
+  // Origin/Destination
+  sourceCountry     String?
+  destinationCountry String?
+
+  notes             String?
+
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  productMaster     ProductMaster               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier          Supplier                    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, supplierId])
+  @@index([supplierId])
+}
+

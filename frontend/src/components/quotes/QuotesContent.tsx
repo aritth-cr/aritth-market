@@ -176,12 +176,15 @@ export function QuotesContent({ token }: { token: string }) {
                             {confirming ? 'Confirmando...' : 'Confirmar OC'}
                           </button>
                         </div>
-                    
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })}
         </div>
-      ))}
+      )}
     </div>
   );
 }
