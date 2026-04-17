@@ -206,4 +206,14 @@ export async function buildApp() {
       return reply.status(429).send(error);
     }
 
-    // Error i
+    // Error interno
+    app.log.error(error);
+    return reply.status(500).send({
+      statusCode: 500,
+      error: 'INTERNAL_SERVER_ERROR',
+      message: 'Error interno del servidor',
+    });
+  });
+
+  return app;
+}
