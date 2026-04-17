@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import staticFiles from '@fastify/static';
 import { join } from 'path';
+import { mkdirSync } from 'fs';
 
 import { env } from './config/env.js';
 import { registerAuthPlugin } from './plugins/auth.js';
@@ -74,8 +75,10 @@ export async function buildApp() {
   await registerAuthPlugin(app);
 
   // ---- ARCHIVOS ESTÁTICOS (PDFs) ----
+  const storagePath = join(process.cwd(), env.STORAGE_PATH);
+  mkdirSync(storagePath, { recursive: true });
   await app.register(staticFiles, {
-    root: join(process.cwd(), env.STORAGE_PATH),
+    root: storagePath,
     prefix: '/files/',
   });
 
@@ -203,14 +206,4 @@ export async function buildApp() {
       return reply.status(429).send(error);
     }
 
-    // Error interno
-    app.log.error(error);
-    return reply.status(500).send({
-      statusCode: 500,
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Error interno del servidor',
-    });
-  });
-
-  return app;
-}
+    // Error i
